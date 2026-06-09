@@ -114,38 +114,35 @@
             <button class="btn-logout" onclick="handleLogout()">ထွက်မည်</button>
         </div>
 
-<div class="fin-grid">
-    <div class="fin-box bg-blue" style="grid-column: span 1;">
-        <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
-        <h4 id="lblTotalProfit">0 Ks</h4>
-    </div>
-    <div class="fin-box bg-orange-box" style="grid-column: span 1;">
-        <p>⚙️ စနစ်အခြေအနေ</p>
-        <h4 style="font-size:12px;">အွန်လိုင်း</h4>
-    </div>
-</div>
+        <div class="fin-grid">
+            <div class="fin-box bg-blue" style="grid-column: span 1;">
+                <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
+                <h4 id="lblTotalProfit">0 Ks</h4>
+            </div>
+            <div class="fin-box bg-orange-box" style="grid-column: span 1;">
+                <p>⚙️ စနစ်အခြေအနေ</p>
+                <h4 style="font-size:12px;">အွန်လိုင်း</h4>
+            </div>
+        </div>
 
-<div class="card" style="border-top: 4px solid var(--primary);">
-    <h4>📦 လက်ရှိစနစ်ထဲရှိ ကတ်လက်ကျန် အရေအတွက်ဇယား</h4>
-    <div class="table-container">
-        <table style="width:100%; border-collapse:collapse; font-size:12px;">
-            <thead>
-                <tr style="background:#f8fafc; text-align:left; color:var(--gray);">
-                    <th style="padding:10px;">Package အမည်</th>
-                    <th style="padding:10px;">ကုဒ်လက်ကျန် (ခုရေ)</th>
-                </tr>
-            </thead>
-            <tbody id="adminStockTableBody">
-                </tbody>
-        </table>
-    </div>
-</div>
-
-
-
+        <div class="card" style="border-top: 4px solid var(--primary);">
+            <h4>📦 လက်ရှိစနစ်ထဲရှိ ကတ်လက်ကျန် အရေအတွက်ဇယား</h4>
+            <div class="table-container">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead>
+                        <tr style="background:#f8fafc; text-align:left; color:var(--gray);">
+                            <th style="padding:10px;">Package အမည်</th>
+                            <th style="padding:10px;">ကုဒ်လက်ကျန် (ခုရေ)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminStockTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <div class="card" style="border-top: 4px solid var(--orange); background: var(--orange-light);">
-            <h4 style="color:var(--orange);">💸 အေးဂျင့်များထံမှ ငွေရှင်းရန်တောင်းဆိုမှုများ</h4>
+            <h4 style="color:var(--orange);">💸 အေးဂျင့်များထံမှ Ngwe Shin Yan Taung So Mhu Myar</h4>
             <div class="table-container">
                 <table>
                     <thead>
@@ -262,7 +259,7 @@
         </div>
 
         <div class="card">
-            <h4>📊 Agent များစာရင်း စီမံခန့်ခွဲမှု</h4>
+            <h4>📊 Agent များစာရင်း Сီမံခန့်ခွဲမှု</h4>
             <div class="table-container">
                 <table>
                     <thead>
@@ -280,7 +277,7 @@
         </div>
 
         <div class="card" style="border-top: 4px solid #7c3aed;">
-            <h4>📦 Package မျိုးစုံ စီမံခန့်ခွဲမှု (Manual Setup)</h4>
+            <h4>📦 Package မျိုးစုံ Сီမံခန့်ခွဲမှု (Manual Setup)</h4>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                 <div>
@@ -319,7 +316,7 @@
             <div class="toggle-box">
                 <input type="checkbox" id="chkEnableRefund" checked style="width: 22px; height: 22px; margin:0; cursor:pointer;">
                 <label for="chkEnableRefund" style="margin:0; cursor:pointer; color:var(--danger); font-size:12px; line-height:1.3;">
-                    <b>⚠️ Error တင်လာပါက စနစ်ထဲမှ ငွေပြန်နှုတ်မည် (Refund)</b>
+                    <b>⚠️ Error တင်လာပါက စနစ်ထဲမှ Ngwe Pyan Hnot Mye (Refund)</b>
                 </label>
             </div>
 
@@ -578,7 +575,7 @@
     function refreshAdminData() {
         if(!window.systemDB) return;
         
-        // ဇယားထဲသို့ Package အလိုက် လက်ကျန်အရေအတွက်များ ထည့်သွင်းခြင်း
+        // ဇယားထဲသို့ Package အလိုက် လက်ကျန်အရေအတွက်များ စနစ်တကျထည့်သွင်းခြင်း
         let stockTbody = document.getElementById('adminStockTableBody');
         if (stockTbody) {
             stockTbody.innerHTML = "";
@@ -591,7 +588,6 @@
         }
 
         updateAllPackageSelectBoxes();
-
 
         let pkgTbody = document.getElementById('adminPackageSettingsTable');
         if(pkgTbody) {
@@ -839,7 +835,6 @@
         saveStateToFirebase();
     }
 
-    // တင်ထားသော Error Report အား ငွေမအမ်းဘဲ ဖျက်ရုံသက်သက် လုပ်ဆောင်ချက်
     function deleteReport(index) {
         systemDB.errorReports.splice(index, 1);
         saveStateToFirebase();
@@ -1094,19 +1089,18 @@
         let targetPkg = systemDB.packages.find(p => p.id === pkg);
         let currentPrice = targetPkg ? targetPkg.price : 0;
 
-// ဝယ်ယူလိုက်သော ကုဒ်များကို အေးဂျင့် မြင်ကွင်းထဲသို့ တိုက်ရိုက် ထည့်ပေးခြင်း
-codesExtracted.forEach(codeStr => {
-    temporaryAgentInventory.push({
-        code: codeStr,
-        package: pkg,
-        price: currentPrice,
-        status: 'bought'
-    });
-});
+        // ပြင်ဆင်ချက် - ဝယ်ယူလိုက်သော ကုဒ်များကို အေးဂျင့် မြင်ကွင်းထဲသို့ တိုက်ရိုက် ထည့်ပေးခြင်း
+        codesExtracted.forEach(codeStr => {
+            temporaryAgentInventory.push({
+                code: codeStr,
+                package: pkg,
+                price: currentPrice,
+                status: 'bought'
+            });
+        });
 
-// အေးဂျင့် စာရင်းဇယားကို ချက်ချင်း ပြန်ဆွဲခိုင်းခြင်း
-renderAgentInventoryHTML();
-
+        // အေးဂျင့် စာရင်းဇယား မြင်ကွင်းကို ချက်ချင်း ပြန်လည်ဆွဲခိုင်းခြင်း
+        renderAgentInventoryHTML();
 
         let timeString = new Date().toLocaleTimeString();
         if(!systemDB.purchaseLogs) systemDB.purchaseLogs = [];
@@ -1205,19 +1199,19 @@ renderAgentInventoryHTML();
 
     function submitSettlementRequest() {
         if(currentLoggedInAgent.toPayAdmin <= 0) {
-            alert("⚠️ ရှင်းလင်းရန် ပေးရန်ငွေ (0 Ks) ဖြစ်နေသဖြင့် ငွေရှင်းရန် တောင်းဆိုမှု လုပ်ဆောင်ရန် မလိုသေးပါဗျာ။");
+            alert("⚠️ ရှင်းလင်းရန် ပေးရန်ငွေ (0 Ks) ဖြစ်နေသဖြင့် Ngwe Shin Yan Taung So Mhu လုပ်ဆောင်ရန် မလိုသေးပါဗျာ။");
             return;
         }
         
         let agentPwd = prompt(`🔑 Admin ထံသို့ ကျသင့်ငွေ ${currentLoggedInAgent.toPayAdmin} Ks ရှင်းလင်းရန် သင့်အကောင့် Password ကို ရိုက်ထည့်ပါ -`);
         if (agentPwd === null) return; 
         if (agentPwd !== currentLoggedInAgent.pass) {
-            alert("❌ အကောင့် Password မှားယွင်းနေသဖြင့် ငွေရှင်းရန် တောင်းဆိုမှု မအောင်မြင်ပါ!");
+            alert("❌ အကောင့် Password မှားယွင်းနေသဖြင့် Ngwe Shin Yan Taung So Mhu Ma Aung Myin Par!");
             return;
         }
 
         currentLoggedInAgent.settlementStatus = "pending";
-        alert("✅ ငွေရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။ Admin ဘက်မှ အတည်ပြုပေးသည်နှင့် ရှင်းပြီးပြောင်းသွားပါမည်။");
+        alert("✅ Ngwe Shin Yan Taung So Mhu Tin Pya Pee Par Pyi. Admin Bat Mha Ati Pyu Pay Yin Shin Pee Pyaung Twar Par Mye.");
         saveStateToFirebase();
     }
 
