@@ -89,8 +89,8 @@
 <div class="app-container">
 
     <div class="app-header">
-        <h2>ရွှေမဲဇာ Wi-Fi</h2>
-        <p>Agent Management System v7.8 (Firebase Online Connected)</p>
+        <h2>ရွှေမဲဇာနက် Wi-Fi</h2>
+        <p>Agent Management System V 1.0 </p>
     </div>
 
     <div id="loginPage" class="page active">
@@ -114,16 +114,35 @@
             <button class="btn-logout" onclick="handleLogout()">ထွက်မည်</button>
         </div>
 
-        <div class="fin-grid">
-            <div class="fin-box bg-blue">
-                <p>📦 ကတ်လက်ကျန်</p>
-                <h4 id="lblTotalCodes" style="font-size:12px; font-weight:700;">Loading...</h4>
-            </div>
-            <div class="fin-box bg-green">
-                <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
-                <h4 id="lblTotalProfit">0 Ks</h4>
-            </div>
-        </div>
+<div class="fin-grid">
+    <div class="fin-box bg-blue" style="grid-column: span 1;">
+        <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
+        <h4 id="lblTotalProfit">0 Ks</h4>
+    </div>
+    <div class="fin-box bg-orange-box" style="grid-column: span 1;">
+        <p>⚙️ စနစ်အခြေအနေ</p>
+        <h4 style="font-size:12px;">အွန်လိုင်း</h4>
+    </div>
+</div>
+
+<div class="card" style="border-top: 4px solid var(--primary);">
+    <h4>📦 လက်ရှိစနစ်ထဲရှိ ကတ်လက်ကျန် အရေအတွက်ဇယား</h4>
+    <div class="table-container">
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+                <tr style="background:#f8fafc; text-align:left; color:var(--gray);">
+                    <th style="padding:10px;">Package အမည်</th>
+                    <th style="padding:10px;">ကုဒ်လက်ကျန် (ခုရေ)</th>
+                </tr>
+            </thead>
+            <tbody id="adminStockTableBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+
+
 
         <div class="card" style="border-top: 4px solid var(--orange); background: var(--orange-light);">
             <h4 style="color:var(--orange);">💸 အေးဂျင့်များထံမှ ငွေရှင်းရန်တောင်းဆိုမှုများ</h4>
@@ -559,14 +578,20 @@
     function refreshAdminData() {
         if(!window.systemDB) return;
         
-        let codesSummary = systemDB.packages.map(p => {
-            let count = systemDB.wifiCodes[p.id] ? systemDB.wifiCodes[p.id].length : 0;
-            let shortName = p.id.toUpperCase().replace("_", "");
-            return `${shortName}: <b>${count}</b> ခု`;
-        }).join(" | ");
-        document.getElementById('lblTotalCodes').innerHTML = codesSummary;
+        // ဇယားထဲသို့ Package အလိုက် လက်ကျန်အရေအတွက်များ ထည့်သွင်းခြင်း
+        let stockTbody = document.getElementById('adminStockTableBody');
+        if (stockTbody) {
+            stockTbody.innerHTML = "";
+            systemDB.packages.forEach(p => {
+                let count = systemDB.wifiCodes[p.id] ? systemDB.wifiCodes[p.id].length : 0;
+                let row = stockTbody.insertRow();
+                row.insertCell(0).innerHTML = `<td style="padding:10px; border-bottom:1px solid #e2e8f0;"><b>${p.name}</b></td>`;
+                row.insertCell(1).innerHTML = `<td style="padding:10px; border-bottom:1px solid #e2e8f0;"><b style="color:var(--primary); font-size:14px;">${count} ခု</b></td>`;
+            });
+        }
 
         updateAllPackageSelectBoxes();
+
 
         let pkgTbody = document.getElementById('adminPackageSettingsTable');
         if(pkgTbody) {
@@ -1069,14 +1094,19 @@
         let targetPkg = systemDB.packages.find(p => p.id === pkg);
         let currentPrice = targetPkg ? targetPkg.price : 0;
 
-        codesExtracted.forEach(codeStr => {
-            temporaryAgentInventory.push({
-                code: codeStr,
-                package: pkg,
-                price: currentPrice,
-                status: 'bought' 
-            });
-        });
+// ဝယ်ယူလိုက်သော ကုဒ်များကို အေးဂျင့် မြင်ကွင်းထဲသို့ တိုက်ရိုက် ထည့်ပေးခြင်း
+codesExtracted.forEach(codeStr => {
+    temporaryAgentInventory.push({
+        code: codeStr,
+        package: pkg,
+        price: currentPrice,
+        status: 'bought'
+    });
+});
+
+// အေးဂျင့် စာရင်းဇယားကို ချက်ချင်း ပြန်ဆွဲခိုင်းခြင်း
+renderAgentInventoryHTML();
+
 
         let timeString = new Date().toLocaleTimeString();
         if(!systemDB.purchaseLogs) systemDB.purchaseLogs = [];
