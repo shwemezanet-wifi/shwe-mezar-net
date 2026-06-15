@@ -500,7 +500,7 @@
         window.scrollTo(0, 0); 
     }
 
-    // ====== LOGIN LOGIC ======
+        // ====== LOGIN LOGIC ======
     function handleLogin() {
         let errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = "none";
@@ -514,6 +514,7 @@
             return;
         }
 
+        // Admin အတွက် စစ်ဆေးခြင်း
         if(idIn === systemDB.adminId.toLowerCase() && passIn === systemDB.adminPassword) {
             document.getElementById('loginId').value = "";
             document.getElementById('loginPassword').value = "";
@@ -522,37 +523,40 @@
             return;
         }
 
+        // Agent အတွက် စစ်ဆေးခြင်း
         let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
-        let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
-if(foundAgent) {
-    currentLoggedInAgent = foundAgent;
-    
-    // ပြင်ဆင်ချက် - အကောင့်ထဲပြန်ဝင်လာလျှင် ယခင်ဝယ်ယူထားသော ကုဒ်စာရင်းကို Database မှ ပြန်ယူခြင်း
-    if(!currentLoggedInAgent.myInventory) {
-        currentLoggedInAgent.myInventory = [];
-    }
-    temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
+        
+        if(foundAgent) {
+            currentLoggedInAgent = foundAgent;
+            
+            // အကောင့်ထဲပြန်ဝင်လာလျှင် ယခင်ဝယ်ယူထားသော ကုဒ်စာရင်းကို Database မှ ပြန်ယူခြင်း
+            if(!currentLoggedInAgent.myInventory) {
+                currentLoggedInAgent.myInventory = [];
+            }
+            temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
 
-    let myDeviceId = localStorage.getItem('my_device_id');
-    if (!myDeviceId) {
-        myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('my_device_id', myDeviceId);
-    }
-    if(!systemDB.currentDevices) systemDB.currentDevices = {};
-    systemDB.currentDevices[foundAgent.id.toLowerCase()] = myDeviceId;
-    
-    saveStateToFirebase(); 
+            let myDeviceId = localStorage.getItem('my_device_id');
+            if (!myDeviceId) {
+                myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('my_device_id', myDeviceId);
+            }
+            if(!systemDB.currentDevices) systemDB.currentDevices = {};
+            systemDB.currentDevices[foundAgent.id.toLowerCase()] = myDeviceId;
+            
+            saveStateToFirebase(); 
 
-    document.getElementById('loginId').value = "";
-    document.getElementById('loginPassword').value = "";
-    setupAgentDashboard();
-    showPage('agentPage');
-    return;
-}
+            document.getElementById('loginId').value = "";
+            document.getElementById('loginPassword').value = "";
+            setupAgentDashboard();
+            showPage('agentPage');
+            return;
+        }
 
+        // ကိုက်ညီမှုမရှိပါက အမှားပြရန်
         errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
         errorArea.style.display = "block";
     }
+
 
     function handleLogout() {
         currentLoggedInAgent = null;
