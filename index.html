@@ -500,7 +500,7 @@
         window.scrollTo(0, 0); 
     }
 
-        // ====== LOGIN LOGIC ======
+    // ====== LOGIN LOGIC ======
     function handleLogin() {
         let errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = "none";
@@ -514,8 +514,11 @@
             return;
         }
 
-        // Admin အတွက် စစ်ဆေးခြင်း
+        // Admin ဝင်လျှင် မှတ်သားရန်
         if(idIn === systemDB.adminId.toLowerCase() && passIn === systemDB.adminPassword) {
+            localStorage.setItem('loggedInUserId', 'admin'); // <-- ထည့်ရန်
+            localStorage.setItem('userRole', 'admin');         // <-- ထည့်ရန်
+            
             document.getElementById('loginId').value = "";
             document.getElementById('loginPassword').value = "";
             refreshAdminData();
@@ -523,16 +526,15 @@
             return;
         }
 
-        // Agent အတွက် စစ်ဆေးခြင်း
+        // Agent ဝင်လျှင် မှတ်သားရန်
         let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
-        
         if(foundAgent) {
             currentLoggedInAgent = foundAgent;
             
-            // အကောင့်ထဲပြန်ဝင်လာလျှင် ယခင်ဝယ်ယူထားသော ကုဒ်စာရင်းကို Database မှ ပြန်ယူခြင်း
-            if(!currentLoggedInAgent.myInventory) {
-                currentLoggedInAgent.myInventory = [];
-            }
+            localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); // <-- ထည့်ရန်
+            localStorage.setItem('userRole', 'agent');                             // <-- ထည့်ရန်
+
+            if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
             temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
 
             let myDeviceId = localStorage.getItem('my_device_id');
@@ -552,18 +554,20 @@
             return;
         }
 
-        // ကိုက်ညီမှုမရှိပါက အမှားပြရန်
         errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
         errorArea.style.display = "block";
     }
 
 
     function handleLogout() {
+      localStorage.removeItem('loggedInUserId');
+      localStorage.removeItem('userRole');
         currentLoggedInAgent = null;
         temporaryAgentInventory = [];
         document.getElementById('loginId').value = "";
         document.getElementById('loginPassword').value = "";
         document.getElementById('loginErrorArea').style.display = "none";
+        
         showPage('loginPage');
     }
 
@@ -1233,11 +1237,35 @@
             reason: reasonIn
         });
 
-        alert("⚠️ ပိုင်ရှင်ထံသို့ Error တင်ပြပေးလိုက်ပါပြီ။");
+                alert("⚠️ ပိုင်ရှင်ထံသို့ Error တင်ပြပေးလိုက်ပါပြီ။");
         document.getElementById('reportErrorCodeInput').value = "";
         document.getElementById('reportErrorReasonInput').value = "";
         saveStateToFirebase();
-    }
-</script>
-</body>
+    } 
+        window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            let savedUserId = localStorage.getItem('loggedInUserId');
+            let savedRole = localStorage.getItem('userRole');
+
+            if(savedUserId && savedRole) {
+                if(savedRole === 'admin') {
+                    if(typeof refreshAdminData === 'function') refreshAdminData();
+                    showPage('adminPage');
+                } else if(savedRole === 'agent') {
+                    let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === savedUserId);
+                    if(foundAgent) {
+                        currentLoggedInAgent = foundAgent;
+                        if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
+                        temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
+                        if(typeof setupAgentDashboard === 'function') setupAgentDashboard();
+                        showPage('agentPage');
+                    }
+                }
+            }
+        }, 1500); 
+    });
+    // ==============================================================
+
+</script> </body>
 </html>
+
