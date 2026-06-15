@@ -523,25 +523,32 @@
         }
 
         let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
-        if(foundAgent) {
-            currentLoggedInAgent = foundAgent;
-            
-            let myDeviceId = localStorage.getItem('my_device_id');
-            if (!myDeviceId) {
-                myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('my_device_id', myDeviceId);
-            }
-            if(!systemDB.currentDevices) systemDB.currentDevices = {};
-            systemDB.currentDevices[foundAgent.id.toLowerCase()] = myDeviceId;
-            
-            saveStateToFirebase(); 
+        let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
+if(foundAgent) {
+    currentLoggedInAgent = foundAgent;
+    
+    // ပြင်ဆင်ချက် - အကောင့်ထဲပြန်ဝင်လာလျှင် ယခင်ဝယ်ယူထားသော ကုဒ်စာရင်းကို Database မှ ပြန်ယူခြင်း
+    if(!currentLoggedInAgent.myInventory) {
+        currentLoggedInAgent.myInventory = [];
+    }
+    temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
 
-            document.getElementById('loginId').value = "";
-            document.getElementById('loginPassword').value = "";
-            setupAgentDashboard();
-            showPage('agentPage');
-            return;
-        }
+    let myDeviceId = localStorage.getItem('my_device_id');
+    if (!myDeviceId) {
+        myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('my_device_id', myDeviceId);
+    }
+    if(!systemDB.currentDevices) systemDB.currentDevices = {};
+    systemDB.currentDevices[foundAgent.id.toLowerCase()] = myDeviceId;
+    
+    saveStateToFirebase(); 
+
+    document.getElementById('loginId').value = "";
+    document.getElementById('loginPassword').value = "";
+    setupAgentDashboard();
+    showPage('agentPage');
+    return;
+}
 
         errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
         errorArea.style.display = "block";
@@ -945,7 +952,8 @@
             return alert("⚠️ ဤ Agent ID ရှိပြီးသားဖြစ်သည်!");
         }
         if(!systemDB.agents) systemDB.agents = [];
-        systemDB.agents.push({ id: id, name: name, pass: pass, comm: comm, earned: 0, toPayAdmin: 0, settlementStatus: "normal" });
+        systemDB.agents.push({ id: id, name: name, pass: pass, comm: comm, earned: 0, toPayAdmin: 0, settlementStatus: "normal", myInventory: [] });
+
         
         document.getElementById('newAgentId').value = "";
         document.getElementById('newAgentName').value = "";
@@ -1071,7 +1079,7 @@
         let targetPkg = systemDB.packages.find(p => p.id === pkg);
         let currentPrice = targetPkg ? targetPkg.price : 0;
 
-        // **ပြင်ဆင်ချက်** - temporaryAgentInventory ထဲအရင်ထည့်ပြီးမှ render လုပ်ပြီး ဆင်ခရိုနိုက်စ်လုပ်ပါသည်
+        
         codesExtracted.forEach(codeStr => {
             temporaryAgentInventory.push({
                 code: codeStr,
@@ -1091,11 +1099,13 @@
             totalPrice: (currentPrice * count)
         });
 
-        // ဇယားကို ဆွဲပြီးမှ Database ကို သိမ်းပါသည် (Sync ခေါ်ချိန် ပျောက်မသွားစေရန်)
+        
+        currentLoggedInAgent.myInventory = [...temporaryAgentInventory];
+
         renderAgentInventoryHTML();
         alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။ အောက်တွင် ရောင်းချနိုင်ပါပြီ။");
         saveStateToFirebase();
-    }
+       }
 
     function renderAgentInventoryHTML() {
         let container = document.getElementById('boughtCodesList');
@@ -1153,10 +1163,12 @@
 
         currentLoggedInAgent.earned += profitEarned;
         currentLoggedInAgent.toPayAdmin += wholesaleCost;
+        currentLoggedInAgent.myInventory = [...temporaryAgentInventory];
 
         renderAgentInventoryHTML();
         saveStateToFirebase();
-    }
+
+      }
 
     window.copyAllCodesToClipboard = function() {
         let rawText = "";
