@@ -440,8 +440,8 @@
     window.systemDB = {
         adminId: "admin", adminPassword: "admin123", totalProfit: 0, enableRefund: true,
         packages: [
-            { id: "1_hour", name: "၁ နာရီစာ ကတ် (1 Hour)", price: 1000 },
-            { id: "1_day", name: "၁ ရက်စာ ကတ် (1 Day)", price: 3000 }
+            { id: "1_hour", name: "၁ နာရီစာ ကတ် (1 Hour)", price: 200 },
+            { id: "1_day", name: "၁ ရက်စာ ကတ် (1 Day)", price: 1000 }
         ],
         wifiCodes: { "1_hour": [], "1_day": [] }, agents: [], currentDevices: {}, purchaseLogs: [], errorReports: []
     };
@@ -455,8 +455,8 @@
                 totalProfit: cloudData.totalProfit || 0,
                 enableRefund: cloudData.enableRefund !== undefined ? cloudData.enableRefund : true,
                 packages: cloudData.packages || [
-                    { id: "1_hour", name: "၁ နာရီစာ ကတ် (1 Hour)", price: 1000 },
-                    { id: "1_day", name: "၁ ရက်စာ ကတ် (1 Day)", price: 3000 }
+                    { id: "1_hour", name: "၁ နာရီစာ ကတ် (1 Hour)", price: 200 },
+                    { id: "1_day", name: "၁ ရက်စာ ကတ် (1 Day)", price: 1000 }
                 ],
                 wifiCodes: cloudData.wifiCodes || { "1_hour": [], "1_day": [] },
                 agents: cloudData.agents || [],
@@ -527,22 +527,41 @@
         }
 
         // Agent ဝင်လျှင် မှတ်သားရန်
+                // Agent အတွက် စစ်ဆေးခြင်း
         let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
         if(foundAgent) {
+            
+            // -----------------------------------------------------------------
+            // 🛡️ DEVICE LOCK စစ်ဆေးခြင်းစနစ် (ဒီနေရာကို အသစ်ဖြည့်စွက်ပါသည်)
+            // -----------------------------------------------------------------
+            let myDeviceId = localStorage.getItem('my_device_id');
+            if (!myDeviceId) {
+                // ဒီစက်အတွက် Device ID မရှိသေးရင် အသစ်တစ်ခု သတ်မှတ်ပေးခြင်း
+                myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('my_device_id', myDeviceId);
+            }
+
+            if(!systemDB.currentDevices) systemDB.currentDevices = {};
+            let activeDeviceIdInDB = systemDB.currentDevices[foundAgent.id.toLowerCase()];
+
+            // တကယ်လို့ Database ထဲမှာ ဒီအေးဂျင့်အတွက် Device ID ရှိနေပြီး၊ လက်ရှိစက်ရဲ့ ID နဲ့ မတူရင် တားဆီးရန်
+            if (activeDeviceIdInDB && myDeviceId !== activeDeviceIdInDB) {
+                errorArea.innerText = "❌ ဤအေးဂျင့်အကောင့်အား အခြားဖုန်း/စက်တစ်ခုတွင် လော့ဂ်အင်ဝင်ထားပြီးဖြစ်၍ ဝင်ရောက်ခွင့်မရှိပါ!";
+                errorArea.style.display = "block";
+                return; // အောက်ကကုဒ်တွေကို ဆက်မလုပ်ဘဲ ဒီတင်ပဲ ရပ်ပစ်ခြင်း
+            }
+            // -----------------------------------------------------------------
+
+            // အကယ်၍ ပထမဆုံးအကြိမ်ဝင်ခြင်း (သို့မဟုတ်) စက်တူညီပါက အောက်ပါအတိုင်း ပုံမှန်ပေးဝင်မည်
             currentLoggedInAgent = foundAgent;
             
-            localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); // <-- ထည့်ရန်
-            localStorage.setItem('userRole', 'agent');                             // <-- ထည့်ရန်
+            localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase());
+            localStorage.setItem('userRole', 'agent');
 
             if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
             temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
 
-            let myDeviceId = localStorage.getItem('my_device_id');
-            if (!myDeviceId) {
-                myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('my_device_id', myDeviceId);
-            }
-            if(!systemDB.currentDevices) systemDB.currentDevices = {};
+            // လက်ရှိစက်ရဲ့ ID ကို Database ပေါ်တွင် အတည်ပြု မှတ်သားခြင်း
             systemDB.currentDevices[foundAgent.id.toLowerCase()] = myDeviceId;
             
             saveStateToFirebase(); 
@@ -553,6 +572,7 @@
             showPage('agentPage');
             return;
         }
+
 
         errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
         errorArea.style.display = "block";
@@ -617,9 +637,10 @@
                 row.insertCell(2).innerText = agent.comm + "%";
                 row.insertCell(3).innerHTML = `<b style="color:var(--orange);">${agent.toPayAdmin} Ks</b>`;
                 
-                let actionCell = row.insertCell(4);
+                                let actionCell = row.insertCell(4);
                 actionCell.innerHTML = `
                     <button class="btn-primary btn-sm" onclick="startEditAgent(${index})" style="background:#0284c7; padding:4px 8px; font-size:10px;">ပြင်မည်</button>
+                    <button class="btn-orange btn-sm" onclick="unlockAgentDevice('${agent.id}')" style="background:var(--orange); padding:4px 8px; font-size:10px;">🔓 Lock ဖြုတ်</button>
                     <button class="btn-danger btn-sm" onclick="deleteAgentAccount(${index})" style="padding:4px 8px; font-size:10px;">X</button>
                 `;
             });
@@ -984,6 +1005,30 @@
             systemDB.agents.splice(index, 1);
             if(editingAgentIndex === index) cancelEditAgentMode(); 
             alert("✅ Agent Account ဖျက်ပြီးပါပြီ။");
+            saveStateToFirebase();
+        }
+    }
+        // -----------------------------------------------------------------
+    // 🔓 အေးဂျင့်၏ DEVICE LOCK အား ADMIN မှ ပြန်လည်ဖြုတ်ပေးသည့် စနစ်
+    // -----------------------------------------------------------------
+    window.unlockAgentDevice = function(agentId) {
+        if(!systemDB.currentDevices || !systemDB.currentDevices[agentId.toLowerCase()]) {
+            alert(`ℹ️ Agent (${agentId.toUpperCase()}) သည် မည်သည့်စက်တွင်မှ Lock ကျမနေပါဗျာ။`);
+            return;
+        }
+
+        if(confirm(`⚠️ Agent (${agentId.toUpperCase()}) ၏ Device Lock ကို ဖြုတ်ရန် သေချာပါသလား?\n(ဖြုတ်ပြီးပါက စက်အသစ်မှ ပြန်လည်ဝင်ရောက်နိုင်မည် ဖြစ်သည်)`)) {
+            let adminPwd = prompt("🔑 ဤလုပ်ဆောင်ချက်ကို အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
+            if (adminPwd === null) return;
+            if (adminPwd !== systemDB.adminPassword) {
+                alert("❌ Admin Password မှားယွင်းနေသဖြင့် လော့ခ်ဖြုတ်ခွင့်မရှိပါ!");
+                return;
+            }
+
+            // Database ထဲရှိ ၎င်းအေးဂျင့်၏ Device ID အား ဖျက်ထုတ်ပစ်ခြင်း
+            delete systemDB.currentDevices[agentId.toLowerCase()];
+            
+            alert(`🎉 အောင်မြင်ပါသည်။ Agent (${agentId.toUpperCase()}) ၏ Device Lock အား လွှတ်ပေးလိုက်ပါပြီဗျာ။`);
             saveStateToFirebase();
         }
     }
