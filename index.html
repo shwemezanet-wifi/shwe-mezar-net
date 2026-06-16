@@ -135,7 +135,10 @@
 </head>
 <body>
 
-
+<div id="dbLoadingOverlay">
+    <div class="spinner"></div>
+    <div>စနစ်ကို ချိတ်ဆက်နေပါသည်...</div>
+</div>
 
 <div class="app-container">
 
@@ -468,15 +471,17 @@
     }
 
     // ====== LOGIN & LOGOUT ======
-    window.handleLogin = function() {
-        var errorArea = document.getElementById('loginErrorArea');
+        window.handleLogin = function() {
+        let errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = "none";
-        var idIn = document.getElementById('loginId').value.trim().toLowerCase(); 
-        var passIn = document.getElementById('loginPassword').value.trim();
+
+        let idIn = document.getElementById('loginId').value.trim().toLowerCase(); 
+        let passIn = document.getElementById('loginPassword').value.trim();
 
         if(!idIn || !passIn) {
             errorArea.innerText = "⚠️ ID နှင့် စကားဝှက်ကို ဖြည့်စွက်ပေးပါဗျာ။";
-            errorArea.style.display = "block"; return;
+            errorArea.style.display = "block";
+            return;
         }
         if(idIn === window.systemDB.adminId.toLowerCase() && passIn === window.systemDB.adminPassword) {
             localStorage.setItem('loggedInUserId', 'admin'); localStorage.setItem('userRole', 'admin');
