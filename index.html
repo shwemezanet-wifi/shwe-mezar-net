@@ -162,6 +162,7 @@
         </div>
     </div>
 
+    <!-- Admin Page -->
     <div id="adminPage" class="page">
         <div class="user-bar">
             <span class="user-info">👤 ပိုင်ရှင် <span style="color:var(--primary)">(Admin)</span></span>
@@ -286,6 +287,7 @@
         </div>
     </div>
 
+    <!-- Agent Page -->
     <div id="agentPage" class="page">
         <div class="user-bar">
             <span class="user-info">👤 အေးဂျင့်: <span id="currentAgentLabel" style="color:var(--success);">-</span></span>
@@ -363,6 +365,7 @@
 
 </div>
 
+<!-- Options Modal -->
 <div id="optionsModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); padding: 15px;">
     <div style="background-color: white; margin: 40% auto; padding: 20px; border-radius: 20px; max-width: 360px;">
         <h3 style="color:var(--primary); text-align:center; font-size:16px;">🎯 ဆင်ဆာအမျိုးအစား ရွေးချယ်ရန်</h3>
@@ -427,13 +430,10 @@
             window.systemDB.packages.forEach(function(p) { 
                 if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; 
             });
-        } else {
-            window.systemDB.wifiCodes = { "1_hour": [], "1_day": [] };
-            db.ref("wifi_system").set(window.systemDB);
         }
 
-        // Fix 1: ဒေတာဘေ့စ်က ဒေတာတွေ ရလာပြီဆိုတာနဲ့ Loading Overlay ကို ဖျောက်ပြီး လော့ဂ်အင် စာမျက်နှာကို တန်းပြပေးလိုက်ပါမယ်
-        document.getElementById('dbLoadingOverlay').style.display = 'none';
+        // ဒေတာရသည်နှင့် Loading အဝိုင်းကို ပိတ်မည်
+        hideLoadingOverlay();
 
         if(currentLoggedInAgent) {
             var freshAgentState = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
@@ -451,10 +451,14 @@
         }
     }, function(error) {
         console.error("Firebase Sync Error: ", error);
-        // ဒေတာဘေ့စ်ချိတ်ဆက်မှု မအောင်မြင်ရင်တောင် အပေါ်က Overlay ကြီး ပိတ်သွားအောင် လုပ်ပေးထားပါတယ်
-        document.getElementById('dbLoadingOverlay').style.display = 'none';
-        alert("ဒေတာဘေ့စ် ချိတ်ဆက်မှု အဆင်မပြေပါ: " + error.message);
+        hideLoadingOverlay();
+        executeAutoLoginCheck();
     });
+
+    function hideLoadingOverlay() {
+        var overlay = document.getElementById('dbLoadingOverlay');
+        if(overlay) overlay.style.display = 'none';
+    }
 
     window.saveStateToFirebase = function() {
         db.ref("wifi_system").set(window.systemDB);
@@ -485,26 +489,28 @@
             refreshAdminData(); showPage('adminPage'); return;
         }
 
-        var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === idIn && a.pass === passIn; });
-        if(foundAgent) {
-            var myDeviceId = localStorage.getItem('my_device_id');
-            if (!myDeviceId) {
-                myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('my_device_id', myDeviceId);
-            }
-            var activeDeviceIdInDB = window.systemDB.currentDevices ? window.systemDB.currentDevices[foundAgent.id.toLowerCase()] : null;
+        if(window.systemDB.agents) {
+            var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === idIn && a.pass === passIn; });
+            if(foundAgent) {
+                var myDeviceId = localStorage.getItem('my_device_id');
+                if (!myDeviceId) {
+                    myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('my_device_id', myDeviceId);
+                }
+                var activeDeviceIdInDB = window.systemDB.currentDevices ? window.systemDB.currentDevices[foundAgent.id.toLowerCase()] : null;
 
-            if (activeDeviceIdInDB && myDeviceId !== activeDeviceIdInDB) {
-                errorArea.innerText = "❌ ဤအကောင့်အား အခြားစက်တစ်ခုတွင် လော့ဂ်အင်ဝင်ထားပြီးဖြစ်၍ ဝင်ရောက်ခွင့်မရှိပါ!";
-                errorArea.style.display = "block"; return;
+                if (activeDeviceIdInDB && myDeviceId !== activeDeviceIdInDB) {
+                    errorArea.innerText = "❌ ဤအကောင့်အား အခြားစက်တစ်ခုတွင် လော့ဂ်အင်ဝင်ထားပြီးဖြစ်၍ ဝင်ရောက်ခွင့်မရှိပါ!";
+                    errorArea.style.display = "block"; return;
+                }
+                currentLoggedInAgent = foundAgent;
+                localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); localStorage.setItem('userRole', 'agent');
+                temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
+                
+                db.ref("wifi_system/currentDevices/" + foundAgent.id.toLowerCase()).set(myDeviceId);
+                document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
+                setupAgentDashboard(); showPage('agentPage'); return;
             }
-            currentLoggedInAgent = foundAgent;
-            localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); localStorage.setItem('userRole', 'agent');
-            temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
-            
-            db.ref("wifi_system/currentDevices/" + foundAgent.id.toLowerCase()).set(myDeviceId);
-            document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
-            setupAgentDashboard(); showPage('agentPage'); return;
         }
         errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
         errorArea.style.display = "block";
@@ -515,7 +521,6 @@
         currentLoggedInAgent = null; temporaryAgentInventory = []; showPage('loginPage');
     }
 
-    // Fix 2: Auto Login စစ်ဆေးတဲ့ function ထဲမှာ Agents စာရင်းမရှိသေးခင် ဝင်စစ်မိရင် Error တက်သွားတာကို ပြုပြင်ထားပါတယ်။
     function executeAutoLoginCheck() {
         var savedUserId = localStorage.getItem('loggedInUserId');
         var savedRole = localStorage.getItem('userRole');
@@ -529,7 +534,6 @@
                     temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
                     setupAgentDashboard(); showPage('agentPage');
                 } else {
-                    // သိမ်းထားတဲ့ အကောင့် ID က Database ထဲမှာ မရှိတော့ရင် clear လုပ်ပြီး login ပေးဝင်ပါမယ်
                     handleLogout();
                 }
             }
@@ -1189,8 +1193,17 @@
         });
     }
 
+    // ၃ စက္ကန့်အတွင်း Firebase က အကြောင်းမပြန်ရင် တန်းကျော်ခိုင်းမယ့် စနစ်
     window.addEventListener('DOMContentLoaded', function() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        setTimeout(function() {
+            var overlay = document.getElementById('dbLoadingOverlay');
+            if (overlay && overlay.style.display !== 'none') {
+                overlay.style.display = 'none';
+                executeAutoLoginCheck();
+            }
+        }, 3000); 
     });
 </script>
 
