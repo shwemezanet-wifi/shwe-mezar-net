@@ -273,7 +273,8 @@
                     <label for="chkEnableRefund" style="margin:0; color:var(--danger)">Error တင်ပါက အလိုအလျောက် Ngwe ပြန်အမ်းမည်</label>
                 </div>
                 <label>Admin Password ပြောင်းရန်</label>
-                <input type="text" id="txtAdminPass" value="admin123"> <button class="btn-primary" onclick="saveAdminSettings()" style="background:#475569;">💾 ဆက်တင်သိမ်းမည်</button>
+                <input type="text" id="txtAdminPass" value="admin123">
+                <button class="btn-primary" onclick="saveAdminSettings()" style="background:#475569;">💾 ဆက်တင်သိမ်းမည်</button>
             </div>
         </div>
 
@@ -376,11 +377,11 @@
 </div>
 
 <script>
-    // FIX: Firebase Configuration v8 Standard format သို့ ပြောင်းလဲပြင်ဆင်ပြီး
+    // FIX: သင့်ရဲ့ Firebase Realtime Database URL အမှန်ကို အစားထိုးပြင်ဆင်ပေးပြီးပါပြီ
     var firebaseConfig = {
       apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
       authDomain: "shwe-meza-net-wifi.firebaseapp.com",
-      databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app",
+      databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app/",
       projectId: "shwe-meza-net-wifi",
       storageBucket: "shwe-meza-net-wifi.firebasestorage.app",
       messagingSenderId: "441871786600",
@@ -391,7 +392,6 @@
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
 
-    // Global Object Structure
     window.systemDB = {
         adminId: "admin", adminPassword: "admin123", totalProfit: 0, enableRefund: true,
         packages: [
@@ -406,7 +406,6 @@
     var temporaryAgentInventory = []; 
     var editingAgentIndex = null; 
 
-    // Firebase Realtime Listener
     db.ref("wifi_system").on("value", function(snapshot) {
         var cloudData = snapshot.val();
         if(cloudData) {
@@ -460,7 +459,6 @@
         window.scrollTo(0, 0); 
     }
 
-    // ====== LOGIN & LOGOUT ======
     window.handleLogin = function() {
         var errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = "none";
@@ -508,7 +506,6 @@
         currentLoggedInAgent = null; temporaryAgentInventory = []; showPage('loginPage');
     }
 
-    // ====== ADMIN LOGICS ======
     window.refreshAdminData = function() {
         if(!window.systemDB) return;
         
@@ -784,7 +781,7 @@
             db.ref("wifi_system/totalProfit").set(systemDB.totalProfit);
             db.ref("wifi_system/agents/" + agentIndex + "/toPayAdmin").set(0);
             db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("normal");
-            alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ ငွေစာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`); 
+            alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ Ngweစာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`); 
         }
     }
 
@@ -806,7 +803,6 @@
 
     window.deleteReport = function(index) { systemDB.errorReports.splice(index, 1); saveStateToFirebase(); }
 
-    // ====== SCAN LOGICS ======
     window.showOptionsModal = function() {
         var fileInput = document.getElementById('imageInput');
         if(fileInput.files.length === 0) return;
@@ -919,7 +915,6 @@
         alert("💾 ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။"); saveStateToFirebase();
     }
 
-    // ==================== 👥 AGENT METHODS ====================
     window.setupAgentDashboard = function() {
         if(!currentLoggedInAgent) return;
         document.getElementById('currentAgentLabel').innerText = `${currentLoggedInAgent.name} (${currentLoggedInAgent.id.toUpperCase()})`;
@@ -1090,7 +1085,6 @@
         saveStateToFirebase();
     }
 
-    // Auto-Login Setup
     window.addEventListener('DOMContentLoaded', function() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
