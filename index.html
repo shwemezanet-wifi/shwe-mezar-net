@@ -170,7 +170,7 @@
 
         <div class="fin-grid">
             <div class="fin-box bg-blue">
-                <p>💰 Сုစုပေါင်း ဝင်ငွေ</p>
+                <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
                 <h4 id="lblTotalProfit">0 Ks</h4>
                 <button class="btn-danger btn-sm" onclick="resetTotalProfit()" style="position: absolute; right: 5px; top: 5px; padding: 2px 6px; font-size: 9px; margin:0; width:auto; border-radius:6px;">Reset ညှိရန်</button>
             </div>
@@ -273,8 +273,7 @@
                     <label for="chkEnableRefund" style="margin:0; color:var(--danger)">Error တင်ပါက အလိုအလျောက် Ngwe ပြန်အမ်းမည်</label>
                 </div>
                 <label>Admin Password ပြောင်းရန်</label>
-                <input type="text" id="txtAdminPass" value="admin123">
-                <button class="btn-primary" onclick="saveAdminSettings()" style="background:#475569;">💾 ဆက်တင်သိမ်းမည်</button>
+                <input type="text" id="txtAdminPass" value="admin123"> <button class="btn-primary" onclick="saveAdminSettings()" style="background:#475569;">💾 ဆက်တင်သိမ်းမည်</button>
             </div>
         </div>
 
@@ -377,9 +376,7 @@
 </div>
 
 <script>
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-    // Firebase Configurations
+    // FIX: Firebase Configuration v8 Standard format သို့ ပြောင်းလဲပြင်ဆင်ပြီး
     var firebaseConfig = {
       apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
       authDomain: "shwe-meza-net-wifi.firebaseapp.com",
@@ -409,7 +406,7 @@
     var temporaryAgentInventory = []; 
     var editingAgentIndex = null; 
 
-    // Firebase Listener (Realtime Sync) - FIX: Added dynamic safety checking for dynamic packages
+    // Firebase Realtime Listener
     db.ref("wifi_system").on("value", function(snapshot) {
         var cloudData = snapshot.val();
         if(cloudData) {
@@ -426,13 +423,11 @@
                 errorReports: cloudData.errorReports || []
             };
             
-            // CRITICAL FIX: Ensure wifiCodes sub-arrays always exist for ALL dynamic packages to prevent loading freeze
             if (!window.systemDB.wifiCodes) window.systemDB.wifiCodes = {};
             window.systemDB.packages.forEach(function(p) { 
                 if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; 
             });
         } else {
-            // Initial Seed if Database is completely empty
             window.systemDB.wifiCodes = { "1_hour": [], "1_day": [] };
             db.ref("wifi_system").set(window.systemDB);
         }
@@ -500,7 +495,6 @@
             localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); localStorage.setItem('userRole', 'agent');
             temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
             
-            // FIX: Targeted precise update to prevent multi-user race overwrite
             db.ref("wifi_system/currentDevices/" + foundAgent.id.toLowerCase()).set(myDeviceId);
             document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
             setupAgentDashboard(); showPage('agentPage'); return;
@@ -787,7 +781,6 @@
             var agent = systemDB.agents[agentIndex];
             systemDB.totalProfit += agent.toPayAdmin; 
             
-            // FIX: Targeted individual node update to protect agent runtime sync
             db.ref("wifi_system/totalProfit").set(systemDB.totalProfit);
             db.ref("wifi_system/agents/" + agentIndex + "/toPayAdmin").set(0);
             db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("normal");
@@ -806,7 +799,7 @@
             var ownerRefundNet = cardPrice - agentRefundComm;          
             targetAgent.earned -= agentRefundComm; targetAgent.toPayAdmin -= ownerRefundNet;
             if(targetAgent.toPayAdmin < 0) targetAgent.toPayAdmin = 0;
-            alert(`🎉 ငွေပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: ${agentRefundComm} Ks\n- Owner Cost Deduct: ${ownerRefundNet} Ks`);
+            alert(`🎉 Ngwe ပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: ${agentRefundComm} Ks\n- Owner Cost Deduct: ${ownerRefundNet} Ks`);
         }
         systemDB.errorReports.splice(index, 1); saveStateToFirebase();
     }
@@ -994,7 +987,6 @@
             totalPrice: (currentPrice * count) 
         });
 
-        // FIX: Precise multi-node atomic updates to prevent background agent crash overwrite
         var updates = {};
         updates["wifi_system/wifiCodes/" + pkg] = sourceArray;
         updates["wifi_system/purchaseLogs"] = systemDB.purchaseLogs;
@@ -1053,7 +1045,6 @@
         currentLoggedInAgent.toPayAdmin = (currentLoggedInAgent.toPayAdmin || 0) + (item.price - profitEarned);
         currentLoggedInAgent.myInventory = temporaryAgentInventory;
 
-        // FIX: Atomic direct leaf updating for smooth concurrent agent network operations
         var updates = {};
         updates["wifi_system/agents/" + agentIndex + "/earned"] = currentLoggedInAgent.earned;
         updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = currentLoggedInAgent.toPayAdmin;
