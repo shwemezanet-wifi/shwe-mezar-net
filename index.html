@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fi Mobile App (Advanced Sync UI)</title>
+    <title>ရွှေမဲဇာနက် Wi-Fi</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
@@ -282,7 +282,7 @@
             <button class="nav-item active" onclick="switchAdminSubPage('dashboard', this)"><span>📊</span>Dashboard</button>
             <button class="nav-item" onclick="switchAdminSubPage('upload', this)"><span>📥</span>ကုဒ်တင်ရန်</button>
             <button class="nav-item" onclick="switchAdminSubPage('agents', this)"><span>👥</span>အေးဂျင့်များ</button>
-            <button class="nav-item" onclick="switchAdminSubPage('settings', this)"><span>⚙️</span>မှတ်တမ်း</button>
+            <button class="nav-item" onclick="switchAdminSubPage('settings', this)"><span>⚙</span>မှတ်တမ်း</button>
         </div>
     </div>
 
@@ -377,7 +377,7 @@
 </div>
 
 <script>
-    // Firebase Configurations
+    // ရရှိလာသော သင့်ရဲ့ အကောင့် Config အစစ်အမှန်ကို တည့်မတ်ပေးထားပါတယ်ဗျာ။
     var firebaseConfig = {
       apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
       authDomain: "shwe-meza-net-wifi.firebaseapp.com",
@@ -389,7 +389,7 @@
       measurementId: "G-GCGLTXZD9Z"
     };
 
-    // Firebase Initialization (v8 SDK)
+    // Firebase Initialization
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
 
@@ -409,7 +409,7 @@
     var editingAgentIndex = null; 
     var isInitialLoadFinished = false;
 
-    // Secure Firebase Realtime Listener (Granular Separation)
+    // ပြဿနာဖြစ်စေတဲ့ wifi_system node ကို ညွှန်ပြပြီး Realtime လှမ်းဖတ်တဲ့အပိုင်းကို ပြင်ဆင်ထားပါတယ်
     db.ref("wifi_system").on("value", function(snapshot) {
         var cloudData = snapshot.val();
         if(cloudData) {
@@ -422,21 +422,19 @@
             window.systemDB.agents = cloudData.agents || [];
             window.systemDB.currentDevices = cloudData.currentDevices || {};
             window.systemDB.purchaseLogs = cloudData.purchaseLogs || [];
-            window.systemDB.errorReports = cloudData.errorReports || []
+            window.systemDB.errorReports = cloudData.errorReports || [];
             
-            // Ensure array allocations for custom packages
             window.systemDB.packages.forEach(function(p) { 
                 if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; 
             });
         } else {
-            // First time setup inside database
+            // First time auto-setup
             window.systemDB.wifiCodes = { "1_hour": [], "1_day": [] };
             db.ref("wifi_system").set(window.systemDB);
         }
 
         document.getElementById('dbLoadingOverlay').style.display = 'none';
 
-        // Secure Agent Sync Session without losing input values
         if(currentLoggedInAgent) {
             var freshAgentState = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
             if(freshAgentState) {
@@ -447,7 +445,6 @@
         }
         refreshAdminData();
 
-        // Handle Safe Auto-Login Route
         if(!isInitialLoadFinished) {
             isInitialLoadFinished = true;
             executeAutoLoginCheck();
@@ -457,7 +454,6 @@
         alert("ဒေတာဘေ့စ် ချိတ်ဆက်မှု ပျက်ပြားပါသည်: " + error.message);
     });
 
-    // Atomic Database Updates instead of Bulk Overwriting
     window.saveStateToFirebase = function() {
         db.ref("wifi_system").set(window.systemDB);
     }
@@ -533,7 +529,7 @@
         }
     }
 
-    // ====== ADMIN MANAGEMENT METHODS ======
+    // ====== ADMIN METHODS ======
     window.refreshAdminData = function() {
         if(!window.systemDB) return;
         
@@ -998,7 +994,7 @@
         });
     }
 
-    // ==================== 👥 AGENT DASHBOARD METHODS ====================
+    // ==================== 👥 AGENT METHODS ====================
     window.setupAgentDashboard = function() {
         if(!currentLoggedInAgent) return;
         document.getElementById('currentAgentLabel').innerText = `${currentLoggedInAgent.name} (${currentLoggedInAgent.id.toUpperCase()})`;
@@ -1028,7 +1024,6 @@
     }
     window.closePwdBox = function() { document.getElementById('pwdConfirmBox').style.display = "none"; }
 
-    // Transaction-Safe Atomic Buying Operation
     window.executeBuyCodesConfirmed = function() {
         if(document.getElementById('txtAgentActionPwd').value.trim() !== currentLoggedInAgent.pass) return alert("❌ Password မှားယွင်းနေပါသည်။");
         closePwdBox(); 
@@ -1039,14 +1034,12 @@
         var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
         if (agentIndex === -1) return alert("စနစ်အမှားအယွင်း ဖြစ်သွားပါသည်!");
 
-        // Dynamic cloud reload verification just before database write transaction
         db.ref("wifi_system/wifiCodes/" + pkg).get().then(function(snapshot) {
             var freshCodesList = snapshot.val() || [];
             if(freshCodesList.length < count) {
                 return alert(`❌ ကုဒ်မလုံလောက်တော့ပါ။ အခြားသူယူသွားနိုင်ပါသည်။ လက်ကျန်: ${freshCodesList.length} ခုပဲ ရှိပါသည်။`);
             }
             
-            // Atomically extract specific nodes from database
             var codesExtracted = [];
             for (var i = 0; i < count; i++) {
                 codesExtracted.push(freshCodesList.shift());
