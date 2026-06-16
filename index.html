@@ -470,51 +470,56 @@
         window.scrollTo(0, 0); 
     }
 
-    // ====== LOGIN & LOGOUT ======
-        window.handleLogin = function() {
-        let errorArea = document.getElementById('loginErrorArea');
-        errorArea.style.display = "none";
+    /    // ====== LOGIN & LOGOUT ======
+    window.handleLogin = function() {
+        var errorArea = document.getElementById('loginErrorArea');
+        errorArea.style.display = 'none';
+        errorArea.innerText = '';
 
-        let idIn = document.getElementById('loginId').value.trim().toLowerCase(); 
-        let passIn = document.getElementById('loginPassword').value.trim();
-
-        if(!idIn || !passIn) {
-            errorArea.innerText = "⚠️ ID နှင့် စကားဝှက်ကို ဖြည့်စွက်ပေးပါဗျာ။";
-            errorArea.style.display = "block";
+        // 🌟 စနစ်စိတ်ချရအောင် ထည့်သွင်းထားသော ကုဒ်သစ် (Database မတက်သေးရင် Error ပြခိုင်းမည်)
+        if (!window.systemDB) {
+            errorArea.style.display = 'block';
+            errorArea.innerText = '❌ စနစ်က ဒေတာဘေ့စ်နှင့် မချိတ်ဆက်နိုင်သေးပါ။ (VPN ဖွင့်ရန် လိုအပ်နိုင်ပါသည် သို့မဟုတ် Firebase Rules ကို စစ်ဆေးပါ)';
             return;
         }
-        if(idIn === window.systemDB.adminId.toLowerCase() && passIn === window.systemDB.adminPassword) {
-            localStorage.setItem('loggedInUserId', 'admin'); localStorage.setItem('userRole', 'admin');
-            document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
-            refreshAdminData(); showPage('adminPage'); return;
+
+        var idInput = document.getElementById('loginId').value.trim();
+        var pwInput = document.getElementById('loginPw').value.trim();
+
+        if(!idInput || !pwInput) {
+            errorArea.style.display = 'block';
+            errorArea.innerText = '❌ ကျေးဇူးပြု၍ ID နှင့် စကားဝှက်ကို ပြည့်စုံစွာ ဖြည့်စွက်ပါ။';
+            return;
         }
 
-        if(window.systemDB.agents) {
-            var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === idIn && a.pass === passIn; });
-            if(foundAgent) {
-                var myDeviceId = localStorage.getItem('my_device_id');
-                if (!myDeviceId) {
-                    myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem('my_device_id', myDeviceId);
-                }
-                var activeDeviceIdInDB = window.systemDB.currentDevices ? window.systemDB.currentDevices[foundAgent.id.toLowerCase()] : null;
+        // Admin Login
+        if(idInput === window.systemDB.adminId && pwInput === window.systemDB.adminPassword) {
+            currentLoggedInAdmin = true;
+            localStorage.setItem('wifi_admin_login', 'true');
+            showPage('adminDashboard');
+            initAdminDashboard();
+            return;
+        }
 
-                if (activeDeviceIdInDB && myDeviceId !== activeDeviceIdInDB) {
-                    errorArea.innerText = "❌ ဤအကောင့်အား အခြားစက်တစ်ခုတွင် လော့ဂ်အင်ဝင်ထားပြီးဖြစ်၍ ဝင်ရောက်ခွင့်မရှိပါ!";
-                    errorArea.style.display = "block"; return;
-                }
-                currentLoggedInAgent = foundAgent;
-                localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); localStorage.setItem('userRole', 'agent');
-                temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
-                
-                db.ref("wifi_system/currentDevices/" + foundAgent.id.toLowerCase()).set(myDeviceId);
-                document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
-                setupAgentDashboard(); showPage('agentPage'); return;
+        // Agent Login
+        var agents = window.systemDB.agents || {};
+        if(agents[idInput] && agents[idInput].password === pwInput) {
+            if(agents[idInput].status === 'banned') {
+                errorArea.style.display = 'block';
+                errorArea.innerText = '❌ ဤအေးဂျင့်အကောင့်အား ပိတ်ပင်ထားပါသည်။';
+                return;
             }
+            currentLoggedInAgent = idInput;
+            localStorage.setItem('wifi_agent_login', idInput);
+            showPage('agentDashboard');
+            initAgentDashboard();
+            return;
         }
-        errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
-        errorArea.style.display = "block";
-    }
+
+        errorArea.style.display = 'block';
+        errorArea.innerText = '❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!';
+    };
+
 
     window.handleLogout = function() {
         localStorage.removeItem('loggedInUserId'); localStorage.removeItem('userRole');
