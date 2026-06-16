@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fi Mobile App (All-in-One)</title>
+    <title>Wi-Fi Mobile App (Advanced UI)</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
     <style>
         :root {
-            --primary: #4f46e5; /* Modern Indigo Blue */
+            --primary: #4f46e5; 
             --primary-light: #e0e7ff; 
             --success: #10b981; 
             --success-light: #d1fae5; 
@@ -23,137 +24,65 @@
             --radius: 20px;
         }
 
-        * { 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-        }
-
-        body { 
-            background-color: var(--bg); 
-            color: var(--dark); 
-            padding-bottom: 90px; /* Bottom Nav ဖုံးမသွားစေရန် */
-            -webkit-tap-highlight-color: transparent; 
-        }
-
-        .app-container { 
-            max-width: 480px; 
-            margin: auto; 
-            padding: 16px;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--dark); padding-bottom: 90px; -webkit-tap-highlight-color: transparent; }
+        .app-container { max-width: 480px; margin: auto; padding: 16px; }
 
         /* Header */
         .app-header { 
             background: linear-gradient(135deg, #312e81, #4f46e5); 
-            color: white; 
-            padding: 24px 20px; 
-            border-radius: var(--radius); 
-            text-align: center; 
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.25); 
-            margin-bottom: 20px;
+            color: white; padding: 24px 20px; border-radius: var(--radius); text-align: center; 
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.25); margin-bottom: 20px;
         }
         .app-header h2 { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
         .app-header p { font-size: 12px; opacity: 0.75; margin-top: 4px; }
 
         /* User Status Bar */
         .user-bar { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            background: white; 
-            padding: 14px 18px; 
-            border-radius: 16px; 
-            margin-bottom: 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: white; padding: 14px 18px; border-radius: 16px; margin-bottom: 20px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
         }
         .user-info { font-size: 13px; font-weight: 700; color: var(--dark); }
         .btn-logout { 
-            background: var(--danger-light); 
-            color: var(--danger); 
-            padding: 8px 14px; 
-            border-radius: 10px; 
-            border: none; 
-            cursor: pointer; 
-            font-size: 12px; 
-            font-weight: 700;
-            transition: 0.2s;
+            background: var(--danger-light); color: var(--danger); padding: 8px 14px; 
+            border-radius: 10px; border: none; cursor: pointer; font-size: 12px; font-weight: 700; transition: 0.2s;
         }
         .btn-logout:active { transform: scale(0.95); }
 
         /* Pages & Animations */
         .page { display: none; } 
         .page.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes slideUp { 
-            from { opacity: 0; transform: translateY(20px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Modern Card */
         .card { 
-            background: white; 
-            border-radius: var(--radius); 
-            padding: 20px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.02); 
-            border: 1px solid rgba(226,232,240,0.6); 
+            background: white; border-radius: var(--radius); padding: 20px; margin-bottom: 20px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02); border: 1px solid rgba(226,232,240,0.6); 
         }
-        .card h4 { 
-            font-size: 15px; 
-            font-weight: 700; 
-            color: var(--dark); 
-            margin-bottom: 16px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-        }
+        .card h4 { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 
-        /* Modern List Card Items (သတင်းစာဇယားကြီးများအစား အစားထိုးရန်) */
+        /* Modern List Card Items */
         .data-card-item {
-            background: var(--gray-light);
-            padding: 14px 16px;
-            border-radius: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            border: 1px solid #f1f5f9;
+            background: var(--gray-light); padding: 14px 16px; border-radius: 14px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid #f1f5f9;
         }
         .data-card-item .title { font-weight: 700; font-size: 13px; }
         .data-card-item .value { font-weight: 800; font-size: 14px; color: var(--primary); }
 
         /* Inputs & Forms */
         label { font-size: 11px; font-weight: 700; color: #64748b; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-        input, select { 
-            width: 100%; 
-            padding: 14px; 
-            margin-bottom: 16px; 
-            border: 1.5px solid #e2e8f0; 
-            border-radius: 12px; 
-            font-size: 14px; 
-            color: var(--dark); 
-            background-color: var(--gray-light); 
-            transition: all 0.3s; 
-            -webkit-appearance: none; 
+        input, select, textarea { 
+            width: 100%; padding: 14px; margin-bottom: 16px; border: 1.5px solid #e2e8f0; 
+            border-radius: 12px; font-size: 14px; color: var(--dark); background-color: var(--gray-light); transition: all 0.3s; 
         }
-        input:focus, select:focus { 
-            border-color: var(--primary); 
-            background-color: white; 
-            outline: none; 
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15); 
-        }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); background-color: white; outline: none; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15); }
+        textarea { resize: vertical; min-height: 80px; font-family: monospace; }
 
         /* Buttons */
         button { 
-            width: 100%; 
-            padding: 15px; 
-            font-size: 14px; 
-            font-weight: 700; 
-            border-radius: 14px; 
-            border: none; 
-            cursor: pointer; 
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); 
-            margin-top: 4px; 
+            width: 100%; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 14px; border: none; 
+            cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); margin-top: 4px; 
         }
         button:active { transform: scale(0.96); opacity: 0.9; }
         .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
@@ -164,43 +93,23 @@
 
         /* Dashboard Grid Boxes */
         .fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .fin-box { padding: 18px 14px; border-radius: var(--radius); text-align: center; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.01); }
+        .fin-box { padding: 18px 14px; border-radius: var(--radius); text-align: center; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.01); position: relative;}
         .bg-blue { background: var(--primary-light); color: var(--primary); border: 1px solid rgba(79, 70, 229, 0.05); }
         .bg-green { background: var(--success-light); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.05); }
         .bg-orange-box { background: var(--orange-light); color: var(--orange); border: 1px solid rgba(249, 115, 22, 0.05); }
         .fin-box p { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
         .fin-box h4 { font-size: 16px; font-weight: 800; margin-top: 6px; }
 
-        /* Bottom Navigation Bar (ခေတ်မီ အောက်ခြေ Menu) */
+        /* Bottom Navigation Bar */
         .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(226, 232, 240, 0.8);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-            z-index: 999;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+            position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+            z-index: 999; box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
         }
         .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: var(--gray);
-            font-size: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 4px 12px;
-            width: auto;
-            margin: 0;
-            box-shadow: none;
+            display: flex; flex-direction: column; align-items: center; color: var(--gray); font-size: 10px; font-weight: 700;
+            cursor: pointer; background: none; border: none; padding: 4px 12px; width: auto; margin: 0; box-shadow: none;
         }
         .nav-item.active { color: var(--primary); }
         .nav-item span { font-size: 18px; margin-bottom: 2px; }
@@ -265,6 +174,7 @@
             <div class="fin-box bg-blue">
                 <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
                 <h4 id="lblTotalProfit">0 Ks</h4>
+                <button class="btn-danger btn-sm" onclick="resetTotalProfit()" style="position: absolute; right: 5px; top: 5px; padding: 2px 6px; font-size: 9px; margin:0; width:auto; border-radius:6px;">Reset ညှိရန်</button>
             </div>
             <div class="fin-box bg-green">
                 <p>⚙️ စနစ်အခြေအနေ</p>
@@ -290,16 +200,21 @@
                 <label>ကတ်အမျိုးအစား ရွေးပါ</label>
                 <select id="uploadPackageSelect"></select>
                 
-                <label>လက်ဖြင့် ရိုက်ထည့်ရန်</label>
-                <input type="text" id="manualInput" placeholder="ကုဒ်နံပါတ် ရိုက်ထည့်ပါ">
-                <div id="manualError" style="color:var(--danger); font-size: 11px; display:none; margin-bottom:8px;">⚠️ ဤကုဒ်ရှိပြီးသားဖြစ်သည်။</div>
-                <button class="btn-success" onclick="saveManualCode()" style="background:#475569; padding:12px; margin-bottom:16px;">📥 ကုဒ်သိမ်းမည်</button>
+                <label>ကုဒ်များကို တစ်ပြိုင်နက် Copy / Paste လုပ်ရန်</label>
+                <textarea id="bulkPasteInput" placeholder="ကုဒ်များကို တစ်ခုချင်းဖြစ်စေ၊ ခြားပြီးဖြစ်စေ စိတ်ကြိုက် Paste လုပ်ထည့်ပါ (ဥပမာ - CODE1 CODE2 CODE3)"></textarea>
+                <button class="btn-success" onclick="saveBulkPasteCodes()" style="background:#4f46e5; padding:12px; margin-bottom:16px;">📥 ကုဒ်အားလုံး သိမ်းမည်</button>
                 
                 <hr style="margin: 16px 0; border:0; border-top:1.5px dashed #cbd5e1;">
 
+                <div style="background: #eff6ff; padding: 14px; border-radius: 14px; border: 1.5px solid #bfdbfe; margin-bottom: 16px;">
+                    <label style="color:var(--primary); margin-bottom:6px;">📄 PDF ဖိုင်တင်ပြီး ကုဒ်များဖတ်ရန်</label>
+                    <input type="file" id="pdfFileInput" accept="application/pdf" onchange="processPDFFile()" style="font-size:12px; margin:0;">
+                    <div id="pdfStatus" style="font-size: 11px; font-weight:700; color:var(--primary); margin-top:6px;"></div>
+                </div>
+
                 <div style="background: var(--gray-light); padding: 16px; border-radius: 14px; border: 2px dashed var(--primary); text-align:center;">
-                    <label style="color:var(--primary); margin-bottom:8px;">📷 ကင်မရာ/ဓာတ်ပုံဖြင့် ကုဒ်ဖတ်ရန်</label>
-                    <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="showOptionsModal()" style="font-size:12px;">
+                    <label style="color:var(--primary); margin-bottom:8px;">📷 ကင်မရာရိုက်ရန် သို့မဟုတ် Screenshot/ပုံဖိုင်တင်ရန်</label>
+                    <input type="file" id="imageInput" accept="image/*" onchange="showOptionsModal()" style="font-size:12px;">
                     <div id="status" style="font-size: 12px; font-weight:700; color:var(--primary); margin-top:8px;"></div>
                 </div>
 
@@ -336,8 +251,7 @@
         <div id="adminSubSettings" style="display:none;">
             <div class="card">
                 <h4>🛒 အေးဂျင့်များ ဝယ်ယူမှုမှတ်တမ်း</h4>
-                <div id="adminLogsTable" class="scroll-view"></div>
-            </div>
+                <div id="adminLogsTable" class="scroll-view"></div> </div>
 
             <div class="card" style="border-color: var(--danger);">
                 <h4>⚠️ တင်ထားသော Error ကုဒ်များ</h4>
@@ -357,7 +271,7 @@
                 <h4>⚙️ အထွေထွေ ဆက်တင်</h4>
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                     <input type="checkbox" id="chkEnableRefund" style="width:20px; height:20px; margin:0;">
-                    <label for="chkEnableRefund" style="margin:0; color:var(--danger)">Error တင်ပါက အလိုအလျောက် ငွေပြန်အမ်းမည်</label>
+                    <label for="chkEnableRefund" style="margin:0; color:var(--danger)">Error တင်ပါက အလိုအလျောက် Ngwe ပြန်အမ်းမည်</label>
                 </div>
                 <label>Admin Password ပြောင်းရန်</label>
                 <input type="text" id="txtAdminPass" value="admin123">
@@ -394,7 +308,7 @@
             <div class="card" style="padding:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:12px; font-weight:bold;">ငွေစာရင်းအခြေအနေ: <b id="lblSettlementStatus">-</b></span>
-                    <button id="btnSubmitSettlement" class="btn-orange btn-sm" onclick="submitSettlementRequest()">Admin ထံ ငွေရှင်းမည်</button>
+                    <button id="btnSubmitSettlement" class="btn-orange btn-sm" onclick="submitSettlementRequest()">Admin ထံ Ngwe ရှင်းမည်</button>
                 </div>
             </div>
 
@@ -453,7 +367,7 @@
 <div id="optionsModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); padding: 15px;">
     <div style="background-color: white; margin: 40% auto; padding: 20px; border-radius: 20px; max-width: 360px;">
         <h3 style="color:var(--primary); text-align:center; font-size:16px;">🎯 ဆင်ဆာအမျိုးအစား ရွေးချယ်ရန်</h3>
-        <p style="font-size:11px; color:var(--gray); text-align:center; margin-top:4px; margin-bottom:16px;">ကတ်ပေါ်ရှိ ကုဒ်ပုံစံအတိုင်း ရွေးချယ်ပေးပါဗျာ။</p>
+        <p style="font-size:11px; color:var(--gray); text-align:center; margin-top:4px; margin-bottom:16px;">ပုံတွင်ပါရှိသော ကုဒ်ပုံစံအတိုင်း ရွေးချယ်ပေးပါဗျာ။</p>
         <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
             <button class="btn-primary" onclick="startScanningWithSensor('text_only')" style="background:#7c3aed;">🔤 စာလုံးသက်သက် (ABCD)</button>
             <button class="btn-primary" onclick="startScanningWithSensor('num_only')" style="background:#ea580c;">🔢 ဂဏန်းသက်သက် (1234)</button>
@@ -516,8 +430,7 @@
                 purchaseLogs: cloudData.purchaseLogs || [],
                 errorReports: cloudData.errorReports || []
             };
-            if(!window.systemDB.wifiCodes["1_hour"]) window.systemDB.wifiCodes["1_hour"] = [];
-            if(!window.systemDB.wifiCodes["1_day"]) window.systemDB.wifiCodes["1_day"] = [];
+            systemDB.packages.forEach(p => { if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; });
         } else {
             saveStateToFirebase();
         }
@@ -548,24 +461,17 @@
     window.handleLogin = function() {
         let errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = "none";
-
         let idIn = document.getElementById('loginId').value.trim().toLowerCase(); 
         let passIn = document.getElementById('loginPassword').value.trim();
 
         if(!idIn || !passIn) {
             errorArea.innerText = "⚠️ ID နှင့် စကားဝှက်ကို ဖြည့်စွက်ပေးပါဗျာ။";
-            errorArea.style.display = "block";
-            return;
+            errorArea.style.display = "block"; return;
         }
-
         if(idIn === systemDB.adminId.toLowerCase() && passIn === systemDB.adminPassword) {
-            localStorage.setItem('loggedInUserId', 'admin');
-            localStorage.setItem('userRole', 'admin');
-            document.getElementById('loginId').value = "";
-            document.getElementById('loginPassword').value = "";
-            refreshAdminData();
-            showPage('adminPage');
-            return;
+            localStorage.setItem('loggedInUserId', 'admin'); localStorage.setItem('userRole', 'admin');
+            document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
+            refreshAdminData(); showPage('adminPage'); return;
         }
 
         let foundAgent = systemDB.agents.find(a => a.id.toLowerCase() === idIn && a.pass === passIn);
@@ -575,50 +481,35 @@
                 myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('my_device_id', myDeviceId);
             }
-
             if(!systemDB.currentDevices) systemDB.currentDevices = {};
             let activeDeviceIdInDB = systemDB.currentDevices[foundAgent.id.toLowerCase()];
 
             if (activeDeviceIdInDB && myDeviceId !== activeDeviceIdInDB) {
                 errorArea.innerText = "❌ ဤအကောင့်အား အခြားစက်တစ်ခုတွင် လော့ဂ်အင်ဝင်ထားပြီးဖြစ်၍ ဝင်ရောက်ခွင့်မရှိပါ!";
-                errorArea.style.display = "block";
-                return;
+                errorArea.style.display = "block"; return;
             }
-
             currentLoggedInAgent = foundAgent;
-            localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase());
-            localStorage.setItem('userRole', 'agent');
-
+            localStorage.setItem('loggedInUserId', foundAgent.id.toLowerCase()); localStorage.setItem('userRole', 'agent');
             if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
             temporaryAgentInventory = [...currentLoggedInAgent.myInventory];
-
             systemDB.currentDevices[foundAgent.id.toLowerCase()] = myDeviceId;
             saveStateToFirebase(); 
-
-            document.getElementById('loginId').value = "";
-            document.getElementById('loginPassword').value = "";
-            setupAgentDashboard();
-            showPage('agentPage');
-            return;
+            document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
+            setupAgentDashboard(); showPage('agentPage'); return;
         }
-
         errorArea.innerText = "❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!";
         errorArea.style.display = "block";
     }
 
     window.handleLogout = function() {
-        localStorage.removeItem('loggedInUserId');
-        localStorage.removeItem('userRole');
-        currentLoggedInAgent = null;
-        temporaryAgentInventory = [];
-        showPage('loginPage');
+        localStorage.removeItem('loggedInUserId'); localStorage.removeItem('userRole');
+        currentLoggedInAgent = null; temporaryAgentInventory = []; showPage('loginPage');
     }
 
-    // ====== 🛠️ ADMIN LOGICS (Modern Card Render) ======
+    // ====== 🛠️ ADMIN LOGICS ======
     window.refreshAdminData = function() {
         if(!window.systemDB) return;
         
-        // 1. Stock Cards
         let stockContainer = document.getElementById('adminStockTableBody');
         if (stockContainer) {
             stockContainer.innerHTML = "";
@@ -635,7 +526,6 @@
 
         updateAllPackageSelectBoxes();
 
-        // 2. Package Manager Cards
         let pkgContainer = document.getElementById('adminPackageSettingsTable');
         if(pkgContainer) {
             pkgContainer.innerHTML = "";
@@ -654,7 +544,6 @@
         document.getElementById('lblTotalProfit').innerText = systemDB.totalProfit + " Ks";
         document.getElementById('chkEnableRefund').checked = systemDB.enableRefund;
 
-        // 3. Agent Cards
         let agentContainer = document.getElementById('adminAgentTable');
         if(agentContainer) {
             agentContainer.innerHTML = "";
@@ -680,7 +569,6 @@
             }
         }
 
-        // 4. Settlement Requests Cards
         let settContainer = document.getElementById('adminSettlementTable');
         settContainer.innerHTML = "";
         let pendingRequests = systemDB.agents ? systemDB.agents.filter(a => a.settlementStatus === "pending") : [];
@@ -697,25 +585,28 @@
             });
         }
 
-        // 5. Purchase Logs Cards
+        // ပြင်ဆင်ချက် ၁ - ဝယ်ယူမှုမှတ်တမ်းတွင် "ဖျက်မည်" ခလုတ် ထည့်သွင်းခြင်း
         let logsContainer = document.getElementById('adminLogsTable');
         logsContainer.innerHTML = "";
         if(!systemDB.purchaseLogs || systemDB.purchaseLogs.length === 0) {
             logsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">မှတ်တမ်းမရှိသေးပါ။</p>`;
         } else {
-            [...systemDB.purchaseLogs].reverse().forEach(log => {
+            [...systemDB.purchaseLogs].reverse().forEach((log, revIdx) => {
+                let actualIndex = systemDB.purchaseLogs.length - 1 - revIdx; 
                 let targetPkg = systemDB.packages.find(p => p.id === log.package);
                 let pkgLabel = targetPkg ? targetPkg.name.split(" ")[0] : log.package;
                 logsContainer.innerHTML += `
-                    <div class="data-card-item">
+                    <div class="data-card-item" style="align-items: center;">
                         <div><b style="color:var(--primary);">${log.agentId}</b> (${log.time})</div>
-                        <div style="text-align:right;"><b>${pkgLabel} [${log.count}ခု]</b><br><span style="font-size:11px; color:var(--gray);">${log.totalPrice} Ks</span></div>
+                        <div style="text-align:right; display:flex; align-items:center; gap:8px;">
+                            <div><b>${pkgLabel} [${log.count}ခု]</b><br><span style="font-size:11px; color:var(--gray);">${log.totalPrice} Ks</span></div>
+                            <button class="btn-danger btn-sm" onclick="deletePurchaseLog(${actualIndex})" style="padding: 4px 8px; font-size:10px;">ဖျက်</button>
+                        </div>
                     </div>
                 `;
             });
         }
 
-        // 6. Error Reports Cards
         let reportsContainer = document.getElementById('adminReportsTable');
         reportsContainer.innerHTML = "";
         if(!systemDB.errorReports || systemDB.errorReports.length === 0) {
@@ -724,7 +615,6 @@
             systemDB.errorReports.forEach((report, index) => {
                 let actionBtn = systemDB.enableRefund ? 
                     `<button class="btn-danger btn-sm" onclick="processRefundAndClose(${index})">နုတ်/အမ်းမည်</button>` : `<button class="btn-success btn-sm" onclick="deleteReport(${index})" style="background:#64748b;">ဖျက်မည်</button>`;
-                
                 reportsContainer.innerHTML += `
                     <div class="card" style="padding:12px; margin-bottom:10px; background:#fff5f5;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
@@ -739,56 +629,127 @@
         }
     }
 
+    // ပြင်ဆင်ချက် ၁ - ဝယ်ယူထားတဲ့ စာရင်းဖျက်ရန် Function
+    window.deletePurchaseLog = function(index) {
+        if(confirm("⚠️ ဤဝယ်ယူမှုမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?")) {
+            systemDB.purchaseLogs.splice(index, 1);
+            saveStateToFirebase();
+        }
+    }
+
+    // ပြင်ဆင်ချက် ၁ - ရရှိတဲ့ ဝင်ငွေအမောင့်ကို Reset ချ/ဖျက်ရန် Function
+    window.resetTotalProfit = function() {
+        let ask = prompt("⚠️ ဝင်ငွေပမာဏကို ပြန်လည်ပြင်ဆင်ရန် '0' သို့မဟုတ် မိမိလိုချင်သော ပမာဏကို ရိုက်ထည့်ပါ -");
+        if(ask !== null) {
+            let newAmt = parseInt(ask);
+            if(!isNaN(newAmt)) {
+                systemDB.totalProfit = newAmt;
+                saveStateToFirebase();
+                alert(`✅ ဝင်ငွေစုစုပေါင်းကို ${newAmt} Ks သို့ ပြောင်းလဲသတ်မှတ်ပြီးပါပြီဗျာ။`);
+            } else {
+                alert("❌ ဂဏန်းအမှန်ကိုသာ ရိုက်ထည့်ပေးပါဗျာ။");
+            }
+        }
+    }
+
+    // ပြင်ဆင်ချက် ၃ - ကုဒ်များစွာကို Copy Paste လုပ်ပြီး တစ်ပြိုင်နက်သိမ်းရန် Function (Bulk Paste)
+    window.saveBulkPasteCodes = function() {
+        let pkg = document.getElementById('uploadPackageSelect').value;
+        let bulkText = document.getElementById('bulkPasteInput').value.trim();
+        if(!bulkText) return alert("⚠️ ကုဒ်များကို အရင် Paste လုပ်ထည့်ပေးပါဦးဗျာ။");
+        
+        // Space, Comma, Tab သို့မဟုတ် Enter လိုင်းခြားထားသည်များကို ခွဲထုတ်ခြင်း
+        let tokens = bulkText.split(/[\s,\n\r\t]+/);
+        let codesFiltered = tokens.map(t => t.trim()).filter(t => t.length > 0);
+        
+        if(codesFiltered.length === 0) return alert("⚠️ မှန်ကန်သော ကုဒ်စာသားများ ရှာမတွေ့ပါ။");
+
+        if(!systemDB.wifiCodes[pkg]) systemDB.wifiCodes[pkg] = [];
+        let added = 0; let dup = 0;
+
+        codesFiltered.forEach(code => {
+            if(!systemDB.wifiCodes[pkg].includes(code)) {
+                systemDB.wifiCodes[pkg].push(code); added++;
+            } else { dup++; }
+        });
+
+        alert(`✅ ကုဒ်အလုံးအရင်း သိမ်းဆည်းပြီးပါပြီ။\n- ကုဒ်အသစ်ပေါင်း: (${added}) ခု ထည့်သွင်းပြီး\n- ထပ်နေ၍ပယ်ဖျက်သည်: (${dup}) ခု`);
+        document.getElementById('bulkPasteInput').value = "";
+        saveStateToFirebase();
+    }
+
+    // ပြင်ဆင်ချက် ၄ - PDF ဖိုင်ဖတ်ရှုနည်းစနစ် (PDF Text Extractor)
+    window.processPDFFile = function() {
+        let fileInput = document.getElementById('pdfFileInput');
+        let pdfStatus = document.getElementById('pdfStatus');
+        if(fileInput.files.length === 0) return;
+        
+        let pdfFile = fileInput.files[0];
+        pdfStatus.innerText = "🔄 PDF ဖိုင်ထဲမှ ကုဒ်များကို ဖတ်ယူနေပါသည်...";
+        
+        let reader = new FileReader();
+        reader.onload = function() {
+            let typedarray = new Uint8Array(this.result);
+            pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+                let maxPages = pdf.numPages;
+                let countPromises = [];
+                for (let j = 1; j <= maxPages; j++) {
+                    countPromises.push(pdf.getPage(j).then(function(page) {
+                        return page.getTextContent().then(function(textContent) {
+                            return textContent.items.map(function(item) { return item.str; }).join(" ");
+                        });
+                    }));
+                }
+                return Promise.all(countPromises);
+            }).then(function(textPages) {
+                let fullPDFText = textPages.join(" ");
+                // စာလုံးများ သို့မဟုတ် ဂဏန်းများ ၄ လုံးမှ ၁၀ လုံးကြား ပါဝင်သည့် စကားလုံးများကို Regex ဖြင့် ရှာဖွေခြင်း
+                let matchedCodes = fullPDFText.match(/\b[A-Za-z0-9]{4,10}\b/g) || [];
+                pdfStatus.innerText = `✅ PDF ဖတ်ပြီးပါပြီ။ ကုဒ်နမူနာ (${matchedCodes.length}) ခု တွေ့ရှိသည်။`;
+                displayScannedCodes(matchedCodes);
+            }).catch(function(err) {
+                pdfStatus.innerText = "❌ PDF ဖိုင်ဖတ်ရတာ မအောင်မြင်ပါ။ စာသားပါသော PDF စစ်စစ်ဖြစ်ရပါမည်။";
+            });
+        };
+        reader.readAsArrayBuffer(pdfFile);
+    }
+
     window.addNewPackage = function() {
         let id = document.getElementById('txtNewPkgId').value.trim().toLowerCase().replace(/ /g, "_");
         let name = document.getElementById('txtNewPkgName').value.trim();
         let price = parseInt(document.getElementById('txtNewPkgPrice').value) || 0;
-
         if(!id || !name || price <= 0) return alert("⚠️ အချက်အလက်များ မှန်ကန်စွာ ဖြည့်စွက်ပေးပါဦးဗျာ။");
         if(systemDB.packages.some(p => p.id === id)) return alert("⚠️ ဤ Package ID ရှိပြီးသား ဖြစ်နေသည်။");
-
         systemDB.packages.push({ id: id, name: name, price: price });
         systemDB.wifiCodes[id] = []; 
-        document.getElementById('txtNewPkgId').value = "";
-        document.getElementById('txtNewPkgName').value = "";
-        document.getElementById('txtNewPkgPrice').value = "";
-        alert(`✅ Package '${name}' ထည့်သွင်းပြီးပါပြီ။`);
-        saveStateToFirebase();
+        document.getElementById('txtNewPkgId').value = ""; document.getElementById('txtNewPkgName').value = ""; document.getElementById('txtNewPkgPrice').value = "";
+        alert(`✅ Package '${name}' ထည့်သွင်းပြီးပါပြီ။`); saveStateToFirebase();
     }
 
     window.deletePackage = function(index) {
         let pkg = systemDB.packages[index];
         let adminPwd = prompt(`⚠️ '${pkg.name}' ကို ဖျက်ရန် အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -`);
         if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းသဖြင့် ဖျက်ခွင့်မရှိပါ။");
-        delete systemDB.wifiCodes[pkg.id]; 
-        systemDB.packages.splice(index, 1); 
-        saveStateToFirebase();
+        delete systemDB.wifiCodes[pkg.id]; systemDB.packages.splice(index, 1); saveStateToFirebase();
     }
 
     function updateAllPackageSelectBoxes() {
         let selectors = ['uploadPackageSelect', 'buyPackageSelect', 'reportErrorTypeSelect'];
         selectors.forEach(selectId => {
-            let el = document.getElementById(selectId);
-            if(!el) return;
-            let currentVal = el.value; 
-            el.innerHTML = "";
+            let el = document.getElementById(selectId); if(!el) return;
+            let currentVal = el.value; el.innerHTML = "";
             systemDB.packages.forEach(pkg => {
-                let opt = document.createElement('option');
-                opt.value = pkg.id; opt.innerText = pkg.name; el.appendChild(opt);
+                let opt = document.createElement('option'); opt.value = pkg.id; opt.innerText = pkg.name; el.appendChild(opt);
             });
             if([...el.options].some(o => o.value === currentVal)) { el.value = currentVal; }
         });
     }
 
     window.startEditAgent = function(index) {
-        editingAgentIndex = index;
-        let agent = systemDB.agents[index];
+        editingAgentIndex = index; let agent = systemDB.agents[index];
         document.getElementById('agentFormTitle').innerText = `📝 Agent (${agent.id.toUpperCase()}) ပြင်ဆင်ရန်`;
-        document.getElementById('newAgentId').value = agent.id;
-        document.getElementById('newAgentId').disabled = true; 
-        document.getElementById('newAgentName').value = agent.name;
-        document.getElementById('newAgentPass').value = agent.pass;
-        document.getElementById('newAgentComm').value = agent.comm;
+        document.getElementById('newAgentId').value = agent.id; document.getElementById('newAgentId').disabled = true; 
+        document.getElementById('newAgentName').value = agent.name; document.getElementById('newAgentPass').value = agent.pass; document.getElementById('newAgentComm').value = agent.comm;
         document.getElementById('agentActionButtons').innerHTML = `
             <div style="display:flex; gap:8px;">
                 <button class="btn-success" onclick="saveEditedAgentAccount()" style="flex:1;">💾 Update သိမ်းမည်</button>
@@ -798,13 +759,9 @@
     }
 
     window.cancelEditAgentMode = function() {
-        editingAgentIndex = null;
-        document.getElementById('agentFormTitle').innerText = "👥 Agent အကောင့်အသစ် ဖွင့်ရန်";
-        document.getElementById('newAgentId').value = "";
-        document.getElementById('newAgentId').disabled = false;
-        document.getElementById('newAgentName').value = "";
-        document.getElementById('newAgentPass').value = "";
-        document.getElementById('newAgentComm').value = "";
+        editingAgentIndex = null; document.getElementById('agentFormTitle').innerText = "👥 Agent အကောင့်အသစ် ဖွင့်ရန်";
+        document.getElementById('newAgentId').value = ""; document.getElementById('newAgentId').disabled = false;
+        document.getElementById('newAgentName').value = ""; document.getElementById('newAgentPass').value = ""; document.getElementById('newAgentComm').value = "";
         document.getElementById('agentActionButtons').innerHTML = `<button class="btn-primary" onclick="createAgentAccount()">+ အကောင့်အသစ် ဆောက်မည်</button>`;
     }
 
@@ -814,12 +771,8 @@
         let comm = parseInt(document.getElementById('newAgentComm').value);
         let adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
         if (adminPwd !== systemDB.adminPassword) return alert("❌ Admin Password မှားယွင်းနေပါသည်!");
-
-        let agent = systemDB.agents[editingAgentIndex];
-        agent.name = name; agent.pass = pass; agent.comm = comm;
-        alert(`✅ အချက်အလက်များ ပြင်ဆင်သိမ်းဆည်းပြီးပါပြီ။`);
-        cancelEditAgentMode();
-        saveStateToFirebase();
+        let agent = systemDB.agents[editingAgentIndex]; agent.name = name; agent.pass = pass; agent.comm = comm;
+        alert(`✅ အချက်အလက်များ ပြင်ဆင်သိမ်းဆည်းပြီးပါပြီ။`); cancelEditAgentMode(); saveStateToFirebase();
     }
 
     window.approveSettlement = function(agentId) {
@@ -827,11 +780,8 @@
         if(agent) {
             let adminPwd = prompt("🔑 ဤလုပ်ဆောင်ချက်ကို အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
             if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်။");
-            systemDB.totalProfit += agent.toPayAdmin; 
-            agent.toPayAdmin = 0; 
-            agent.settlementStatus = "normal";
-            alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ ငွေစာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`);
-            saveStateToFirebase();
+            systemDB.totalProfit += agent.toPayAdmin; agent.toPayAdmin = 0; agent.settlementStatus = "normal";
+            alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ ငွေစာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`); saveStateToFirebase();
         }
     }
 
@@ -843,47 +793,28 @@
             let cardPrice = targetPkg ? targetPkg.price : 0;
             let agentRefundComm = cardPrice * (targetAgent.comm / 100); 
             let ownerRefundNet = cardPrice - agentRefundComm;          
-            targetAgent.earned -= agentRefundComm;
-            targetAgent.toPayAdmin -= ownerRefundNet;
+            targetAgent.earned -= agentRefundComm; targetAgent.toPayAdmin -= ownerRefundNet;
             if(targetAgent.toPayAdmin < 0) targetAgent.toPayAdmin = 0;
             alert(`🎉 ငွေပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: ${agentRefundComm} Ks\n- Owner Cost Deduct: ${ownerRefundNet} Ks`);
         }
-        systemDB.errorReports.splice(index, 1);
-        saveStateToFirebase();
-    }
-
-    window.deleteReport = function(index) {
         systemDB.errorReports.splice(index, 1); saveStateToFirebase();
     }
 
-    window.saveManualCode = function() {
-        let pkg = document.getElementById('uploadPackageSelect').value;
-        let codeInput = document.getElementById('manualInput');
-        let errorDiv = document.getElementById('manualError');
-        let code = codeInput.value.trim();
-        errorDiv.style.display = "none";
-        if(code === "") return alert("ကုဒ်အရင်ရိုက်ထည့်ပါဗျာ။");
-        if (!systemDB.wifiCodes[pkg]) systemDB.wifiCodes[pkg] = [];
-        if (systemDB.wifiCodes[pkg].includes(code)) { errorDiv.style.display = "block"; return; }
-        systemDB.wifiCodes[pkg].push(code);
-        codeInput.value = ""; alert("✅ သိမ်းဆည်းပြီးပါပြီ။");
-        saveStateToFirebase();
-    }
+    window.deleteReport = function(index) { systemDB.errorReports.splice(index, 1); saveStateToFirebase(); }
 
-    // ====== 📷 SCAN SENSOR (OCR) LOGICS ======
+    // ====== 📷 SCAN SCREENSHOT / IMAGE LOGICS ======
     window.showOptionsModal = function() {
         let fileInput = document.getElementById('imageInput');
         if(fileInput.files.length === 0) return;
         selectedFile = fileInput.files[0];
         document.getElementById('optionsModal').style.display = "block";
     }
-    window.closeModal = function() {
-        document.getElementById('optionsModal').style.display = "none";
-    }
+    window.closeModal = function() { document.getElementById('optionsModal').style.display = "none"; }
+    
     window.startScanningWithSensor = function(type) {
         closeModal();
         let statusText = document.getElementById('status');
-        statusText.innerText = "🔄 ကုဒ်များကို ဖတ်နေပါသည်... စောင့်ပါ။";
+        statusText.innerText = "🔄 ပုံဖိုင်ထဲမှ ကုဒ်များကို ဖတ်နေပါသည်... စောင့်ပါ။";
         document.getElementById('editArea').style.display = "none";
         let ocrOptions = {}; let filterRegex;
         if (type === 'text_only') {
@@ -894,21 +825,22 @@
             filterRegex = /\b\d{4,8}\b/g;
         } else if (type === 'mixed') {
             ocrOptions = { tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' };
-            filterRegex = /\b[A-Za-z0-9]{4,8}\b/g;
+            filterRegex = /\b[A-Za-0-9]{4,8}\b/g;
         }
         Tesseract.recognize(selectedFile, 'eng', { options: ocrOptions }).then(({ data: { text } }) => {
             statusText.innerText = "✅ ဖတ်လို့ပြီးပါပြီ။";
             let foundCodes = text.match(filterRegex) || [];
             displayScannedCodes(foundCodes);
         }).catch(err => {
-            statusText.innerText = "❌ ဓာတ်ပုံပြန်ရိုက်ကြည့်ပါ။";
+            statusText.innerText = "❌ ပုံဖိုင်ဖတ်၍ မရပါ။ ကျေးဇူးပြု၍ တခြားပုံဖြင့် ပြန်တင်ကြည့်ပါ။";
         });
     }
+
     function displayScannedCodes(codes) {
         let listDiv = document.getElementById('scannedCodesList');
         listDiv.innerHTML = "";
         if(codes.length === 0) {
-            listDiv.innerHTML = "<p style='color:red; font-size:12px;'>ကုဒ်များ ရှာမတွေ့ပါ။ အလင်းအမှောင်ဖြင့် ပြန်ရိုက်ပါ။</p>";
+            listDiv.innerHTML = "<p style='color:red; font-size:12px; padding:10px;'>ကုဒ်များ ရှာမတွေ့ပါ။ စာသားကြည်လင်ပြတ်သားသော ဖိုင်ဖြစ်ရပါမည်။</p>";
             document.getElementById('editArea').style.display = "block"; return;
         }
         codes.forEach((code, index) => {
@@ -921,6 +853,7 @@
         });
         document.getElementById('editArea').style.display = "block";
     }
+
     window.confirmAndSaveScanned = function() {
         let pkg = document.getElementById('uploadPackageSelect').value;
         let inputs = document.querySelectorAll('.code-edit-input');
@@ -937,7 +870,9 @@
         alert(`သိမ်းဆည်းပြီး။ ကုဒ်အသစ် (${addedCount}) ခု ထည့်သွင်းပြီး၊ ထပ်နေသောကုဒ် (${duplicateCount}) ခုကို ပယ်ဖျက်ပြီး။`);
         document.getElementById('editArea').style.display = "none";
         document.getElementById('imageInput').value = "";
+        document.getElementById('pdfFileInput').value = "";
         document.getElementById('status').innerText = "";
+        document.getElementById('pdfStatus').innerText = "";
         saveStateToFirebase();
     }
 
@@ -951,8 +886,7 @@
         if(!systemDB.agents) systemDB.agents = [];
         systemDB.agents.push({ id: id, name: name, pass: pass, comm: comm, earned: 0, toPayAdmin: 0, settlementStatus: "normal", myInventory: [] });
         document.getElementById('newAgentId').value = ""; document.getElementById('newAgentName').value = ""; document.getElementById('newAgentPass').value = ""; document.getElementById('newAgentComm').value = "";
-        alert(`✅ အေးဂျင့်အကောင့် ဆောက်ပြီးပါပြီ။`);
-        saveStateToFirebase();
+        alert(`✅ အေးဂျင့်အကောင့် ဆောက်ပြီးပါပြီ။`); saveStateToFirebase();
     }
 
     window.deleteAgentAccount = function(index) {
@@ -970,8 +904,7 @@
         let adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
         if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
         delete systemDB.currentDevices[agentId.toLowerCase()];
-        alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။`);
-        saveStateToFirebase();
+        alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။`); saveStateToFirebase();
     }
 
     window.saveAdminSettings = function() {
@@ -979,8 +912,7 @@
         if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
         systemDB.adminPassword = document.getElementById('txtAdminPass').value.trim();
         systemDB.enableRefund = document.getElementById('chkEnableRefund').checked;
-        alert("💾 ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။");
-        saveStateToFirebase();
+        alert("💾 ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။"); saveStateToFirebase();
     }
 
     // ==================== 👥 AGENT METHODS ====================
@@ -1003,8 +935,7 @@
         } else {
             statusLbl.innerText = "ပုံမှန်"; statusLbl.style.color = "var(--gray)"; submitBtn.disabled = false; submitBtn.style.opacity = "1";
         }
-        renderAgentInventoryHTML();
-        updateBuyPriceLabel();
+        renderAgentInventoryHTML(); updateBuyPriceLabel();
     }
 
     window.updateBuyPriceLabel = function() {
@@ -1016,8 +947,7 @@
     window.askPasswordConfirm = function() {
         let count = parseInt(document.getElementById('buyCountSelect').value);
         if (isNaN(count) || count <= 0) return alert("⚠️ ကျေးဇူးပြု၍ ဝယ်ယူမည့် အရေအတွက်ကို ထည့်ပါ။");
-        document.getElementById('txtAgentActionPwd').value = "";
-        document.getElementById('pwdConfirmBox').style.display = "block"; 
+        document.getElementById('txtAgentActionPwd').value = ""; document.getElementById('pwdConfirmBox').style.display = "block"; 
     }
     window.closePwdBox = function() { document.getElementById('pwdConfirmBox').style.display = "none"; }
 
@@ -1030,8 +960,7 @@
             let avl = systemDB.wifiCodes[pkg] ? systemDB.wifiCodes[pkg].length : 0;
             return alert(`❌ ကုဒ်မလုံလောက်ပါ။ လက်ကျန်: ${avl} ခုပဲ ရှိပါသည်။`);
         }
-        let codesExtracted = [];
-        let sourceArray = systemDB.wifiCodes[pkg];
+        let codesExtracted = []; let sourceArray = systemDB.wifiCodes[pkg];
         for (let i = 0; i < count; i++) { if (sourceArray.length > 0) codesExtracted.push(sourceArray.shift()); }
         
         let targetPkg = systemDB.packages.find(p => p.id === pkg);
@@ -1042,9 +971,7 @@
         if(!systemDB.purchaseLogs) systemDB.purchaseLogs = [];
         systemDB.purchaseLogs.push({ time: new Date().toLocaleTimeString(), agentId: currentLoggedInAgent.id.toUpperCase(), package: pkg, count: count, totalPrice: (currentPrice * count) });
         currentLoggedInAgent.myInventory = [...temporaryAgentInventory];
-        renderAgentInventoryHTML();
-        alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။");
-        saveStateToFirebase();
+        renderAgentInventoryHTML(); alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။"); saveStateToFirebase();
     }
 
     function renderAgentInventoryHTML() {
@@ -1084,8 +1011,7 @@
     window.markAsIndividualSold = function(index) {
         let item = temporaryAgentInventory[index]; item.status = 'sold';
         let profitEarned = item.price * (currentLoggedInAgent.comm / 100); 
-        currentLoggedInAgent.earned += profitEarned;
-        currentLoggedInAgent.toPayAdmin += (item.price - profitEarned);
+        currentLoggedInAgent.earned += profitEarned; currentLoggedInAgent.toPayAdmin += (item.price - profitEarned);
         currentLoggedInAgent.myInventory = [...temporaryAgentInventory];
         renderAgentInventoryHTML(); setupAgentDashboard(); saveStateToFirebase();
     }
@@ -1108,9 +1034,7 @@
         if(currentLoggedInAgent.toPayAdmin <= 0) return alert("ရှင်းလင်းရန် ပေးရန်ငွေ မရှိသေးပါဗျာ။");
         let agentPwd = prompt(`🔑 ကျသင့်ငွေ ${currentLoggedInAgent.toPayAdmin} Ks ရှင်းရန် သင့်အကောင့် Password ကို ရိုက်ထည့်ပါ -`);
         if (agentPwd !== currentLoggedInAgent.pass) return alert("❌ Password မှားယွင်းနေပါသည်!");
-        currentLoggedInAgent.settlementStatus = "pending";
-        alert("✅ ငွေရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။");
-        saveStateToFirebase();
+        currentLoggedInAgent.settlementStatus = "pending"; alert("✅ ငွေရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။"); saveStateToFirebase();
     }
 
     window.submitErrorReport = function() {
@@ -1127,6 +1051,9 @@
 
     // Auto-Login Check
     window.addEventListener('DOMContentLoaded', () => {
+        // PDF.js worker setting
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
         setTimeout(() => {
             let savedUserId = localStorage.getItem('loggedInUserId');
             let savedRole = localStorage.getItem('userRole');
@@ -1148,7 +1075,7 @@
     function switchAdminSubPage(subId, btnEl) {
         document.getElementById('adminSubDashboard').style.display = 'none';
         document.getElementById('adminSubUpload').style.display = 'none';
-        document.getElementById('adminSubPage') || (document.getElementById('adminSubAgents').style.display = 'none');
+        document.getElementById('adminSubAgents').style.display = 'none';
         document.getElementById('adminSubSettings').style.display = 'none';
         
         if(subId === 'dashboard') document.getElementById('adminSubDashboard').style.display = 'block';
