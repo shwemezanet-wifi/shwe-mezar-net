@@ -377,7 +377,7 @@
 </div>
 
 <script>
-    // ရရှိလာသော သင့်ရဲ့ အကောင့် Config အစစ်အမှန်ကို တည့်မတ်ပေးထားပါတယ်ဗျာ။
+    // Firebase Configuration
     var firebaseConfig = {
       apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
       authDomain: "shwe-meza-net-wifi.firebaseapp.com",
@@ -409,7 +409,7 @@
     var editingAgentIndex = null; 
     var isInitialLoadFinished = false;
 
-    // ပြဿနာဖြစ်စေတဲ့ wifi_system node ကို ညွှန်ပြပြီး Realtime လှမ်းဖတ်တဲ့အပိုင်းကို ပြင်ဆင်ထားပါတယ်
+    // Realtime Sync from Firebase
     db.ref("wifi_system").on("value", function(snapshot) {
         var cloudData = snapshot.val();
         if(cloudData) {
@@ -428,11 +428,11 @@
                 if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; 
             });
         } else {
-            // First time auto-setup
             window.systemDB.wifiCodes = { "1_hour": [], "1_day": [] };
             db.ref("wifi_system").set(window.systemDB);
         }
 
+        // Fix 1: ဒေတာဘေ့စ်က ဒေတာတွေ ရလာပြီဆိုတာနဲ့ Loading Overlay ကို ဖျောက်ပြီး လော့ဂ်အင် စာမျက်နှာကို တန်းပြပေးလိုက်ပါမယ်
         document.getElementById('dbLoadingOverlay').style.display = 'none';
 
         if(currentLoggedInAgent) {
@@ -451,7 +451,9 @@
         }
     }, function(error) {
         console.error("Firebase Sync Error: ", error);
-        alert("ဒေတာဘေ့စ် ချိတ်ဆက်မှု ပျက်ပြားပါသည်: " + error.message);
+        // ဒေတာဘေ့စ်ချိတ်ဆက်မှု မအောင်မြင်ရင်တောင် အပေါ်က Overlay ကြီး ပိတ်သွားအောင် လုပ်ပေးထားပါတယ်
+        document.getElementById('dbLoadingOverlay').style.display = 'none';
+        alert("ဒေတာဘေ့စ် ချိတ်ဆက်မှု အဆင်မပြေပါ: " + error.message);
     });
 
     window.saveStateToFirebase = function() {
@@ -513,19 +515,26 @@
         currentLoggedInAgent = null; temporaryAgentInventory = []; showPage('loginPage');
     }
 
+    // Fix 2: Auto Login စစ်ဆေးတဲ့ function ထဲမှာ Agents စာရင်းမရှိသေးခင် ဝင်စစ်မိရင် Error တက်သွားတာကို ပြုပြင်ထားပါတယ်။
     function executeAutoLoginCheck() {
         var savedUserId = localStorage.getItem('loggedInUserId');
         var savedRole = localStorage.getItem('userRole');
         if(savedUserId && savedRole && window.systemDB && window.systemDB.agents) {
-            if(savedRole === 'admin') { refreshAdminData(); showPage('adminPage'); } 
-            else if(savedRole === 'agent') {
+            if(savedRole === 'admin') { 
+                refreshAdminData(); showPage('adminPage'); 
+            } else if(savedRole === 'agent') {
                 var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === savedUserId; });
                 if(foundAgent) {
                     currentLoggedInAgent = foundAgent; 
                     temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
                     setupAgentDashboard(); showPage('agentPage');
+                } else {
+                    // သိမ်းထားတဲ့ အကောင့် ID က Database ထဲမှာ မရှိတော့ရင် clear လုပ်ပြီး login ပေးဝင်ပါမယ်
+                    handleLogout();
                 }
             }
+        } else {
+            showPage('loginPage');
         }
     }
 
@@ -593,61 +602,67 @@
         }
 
         var settContainer = document.getElementById('adminSettlementTable');
-        settContainer.innerHTML = "";
-        var pendingRequests = window.systemDB.agents ? window.systemDB.agents.filter(function(a) { return a.settlementStatus === "pending"; }) : [];
-        if(pendingRequests.length === 0) {
-            settContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">တောင်းဆိုမှုမရှိသေးပါ။</p>`;
-        } else {
-            pendingRequests.forEach(function(agent) {
-                settContainer.innerHTML += `
-                    <div class="data-card-item" style="background:white;">
-                        <div><b>${agent.id.toUpperCase()}</b><br><span style="color:var(--danger); font-weight:700;">${agent.toPayAdmin} Ks</span></div>
-                        <button class="btn-success btn-sm" onclick="approveSettlement('${agent.id}')">✅ ရရှိမှုအတည်ပြု</button>
-                    </div>
-                `;
-            });
+        if (settContainer) {
+            settContainer.innerHTML = "";
+            var pendingRequests = window.systemDB.agents ? window.systemDB.agents.filter(function(a) { return a.settlementStatus === "pending"; }) : [];
+            if(pendingRequests.length === 0) {
+                settContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">တောင်းဆိုမှုမရှိသေးပါ။</p>`;
+            } else {
+                pendingRequests.forEach(function(agent) {
+                    settContainer.innerHTML += `
+                        <div class="data-card-item" style="background:white;">
+                            <div><b>${agent.id.toUpperCase()}</b><br><span style="color:var(--danger); font-weight:700;">${agent.toPayAdmin} Ks</span></div>
+                            <button class="btn-success btn-sm" onclick="approveSettlement('${agent.id}')">✅ ရရှိမှုအတည်ပြု</button>
+                        </div>
+                    `;
+                });
+            }
         }
 
         var logsContainer = document.getElementById('adminLogsTable');
-        logsContainer.innerHTML = "";
-        if(!window.systemDB.purchaseLogs || window.systemDB.purchaseLogs.length === 0) {
-            logsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">မှတ်တမ်းမရှိသေးပါ။</p>`;
-        } else {
-            [].concat(window.systemDB.purchaseLogs).reverse().forEach(function(log, revIdx) {
-                var actualIndex = window.systemDB.purchaseLogs.length - 1 - revIdx; 
-                var targetPkg = window.systemDB.packages.find(function(p) { return p.id === log.package; });
-                var pkgLabel = targetPkg ? targetPkg.name.split(" ")[0] : log.package;
-                logsContainer.innerHTML += `
-                    <div class="data-card-item" style="align-items: center;">
-                        <div><b style="color:var(--primary);">${log.agentId}</b> (${log.time})</div>
-                        <div style="text-align:right; display:flex; align-items:center; gap:8px;">
-                            <div><b>${pkgLabel} [${log.count}ခု]</b><br><span style="font-size:11px; color:var(--gray);">${log.totalPrice} Ks</span></div>
-                            <button class="btn-danger btn-sm" onclick="deletePurchaseLog(${actualIndex})" style="padding: 4px 8px; font-size:10px;">ဖျက်</button>
+        if (logsContainer) {
+            logsContainer.innerHTML = "";
+            if(!window.systemDB.purchaseLogs || window.systemDB.purchaseLogs.length === 0) {
+                logsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">မှတ်တမ်းမရှိသေးပါ။</p>`;
+            } else {
+                [].concat(window.systemDB.purchaseLogs).reverse().forEach(function(log, revIdx) {
+                    var actualIndex = window.systemDB.purchaseLogs.length - 1 - revIdx; 
+                    var targetPkg = window.systemDB.packages.find(function(p) { return p.id === log.package; });
+                    var pkgLabel = targetPkg ? targetPkg.name.split(" ")[0] : log.package;
+                    logsContainer.innerHTML += `
+                        <div class="data-card-item" style="align-items: center;">
+                            <div><b style="color:var(--primary);">${log.agentId}</b> (${log.time})</div>
+                            <div style="text-align:right; display:flex; align-items:center; gap:8px;">
+                                <div><b>${pkgLabel} [${log.count}ခု]</b><br><span style="font-size:11px; color:var(--gray);">${log.totalPrice} Ks</span></div>
+                                <button class="btn-danger btn-sm" onclick="deletePurchaseLog(${actualIndex})" style="padding: 4px 8px; font-size:10px;">ဖျက်</button>
+                            </div>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
         }
 
         var reportsContainer = document.getElementById('adminReportsTable');
-        reportsContainer.innerHTML = "";
-        if(!window.systemDB.errorReports || window.systemDB.errorReports.length === 0) {
-            reportsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">Report မရှိသေးပါ။</p>`;
-        } else {
-            window.systemDB.errorReports.forEach(function(report, index) {
-                var actionBtn = window.systemDB.enableRefund ? 
-                    `<button class="btn-danger btn-sm" onclick="processRefundAndClose(${index})">နုတ်/အမ်းမည်</button>` : `<button class="btn-success btn-sm" onclick="deleteReport(${index})" style="background:#64748b;">ဖျက်မည်</button>`;
-                reportsContainer.innerHTML += `
-                    <div class="card" style="padding:12px; margin-bottom:10px; background:#fff5f5;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                            <span><b>Agent: ${report.agentId}</b></span>
-                            <code style="background:#fee2e2; color:var(--danger); padding:2px 6px; border-radius:6px; font-weight:bold;">${report.errorCode}</code>
+        if (reportsContainer) {
+            reportsContainer.innerHTML = "";
+            if(!window.systemDB.errorReports || window.systemDB.errorReports.length === 0) {
+                reportsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">Report မရှိသေးပါ။</p>`;
+            } else {
+                window.systemDB.errorReports.forEach(function(report, index) {
+                    var actionBtn = window.systemDB.enableRefund ? 
+                        `<button class="btn-danger btn-sm" onclick="processRefundAndClose(${index})">နုတ်/အမ်းမည်</button>` : `<button class="btn-success btn-sm" onclick="deleteReport(${index})" style="background:#64748b;">ဖျက်မည်</button>`;
+                    reportsContainer.innerHTML += `
+                        <div class="card" style="padding:12px; margin-bottom:10px; background:#fff5f5;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span><b>Agent: ${report.agentId}</b></span>
+                                <code style="background:#fee2e2; color:var(--danger); padding:2px 6px; border-radius:6px; font-weight:bold;">${report.errorCode}</code>
                         </div>
-                        <p style="font-size:12px; color:var(--dark); margin-bottom:6px;">အကြောင်းရင်း: ${report.reason} (${report.package === "1_hour" ? "1H":"1D"})</p>
-                        <div style="text-align:right;">${actionBtn}</div>
-                    </div>
-                `;
-            });
+                            <p style="font-size:12px; color:var(--dark); margin-bottom:6px;">အကြောင်းရင်း: ${report.reason} (${report.package === "1_hour" ? "1H":"1D"})</p>
+                            <div style="text-align:right;">${actionBtn}</div>
+                        </div>
+                    `;
+                });
+            }
         }
     }
 
@@ -851,7 +866,7 @@
         updates["wifi_system/errorReports"] = window.systemDB.errorReports;
         
         db.ref().update(updates).then(function() {
-            alert(`🎉 ငွေပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: နှုတ်ပယ်ပြီး\n- Owner Net Deduct: နှုတ်ပယ်ပြီး`);
+            alert(`🎉 Ngwe ပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: နှုတ်ပယ်ပြီး\n- Owner Net Deduct: နှုတ်ပယ်ပြီး`);
         });
     }
 
@@ -896,6 +911,7 @@
 
     function displayScannedCodes(codes) {
         var listDiv = document.getElementById('scannedCodesList');
+        if (!listDiv) return;
         listDiv.innerHTML = "";
         if(codes.length === 0) {
             listDiv.innerHTML = "<p style='color:red; font-size:12px; padding:10px;'>ကုဒ်များ ရှာမတွေ့ပါ။ စာသားကြည်လင်ပြတ်သားသော ဖိုင်ဖြစ်ရပါမည်။</p>";
@@ -1053,6 +1069,8 @@
                 currentLoggedInAgent.myInventory.push({ code: codeStr, package: pkg, price: currentPrice, status: 'bought' });
             });
             
+            window.systemDB.agents[agentIndex].myInventory = currentLoggedInAgent.myInventory;
+
             if(!window.systemDB.purchaseLogs) window.systemDB.purchaseLogs = [];
             window.systemDB.purchaseLogs.push({ 
                 time: new Date().toLocaleTimeString(), 
