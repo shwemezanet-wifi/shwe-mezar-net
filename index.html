@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wi-Fi Mobile App (Advanced UI)</title>
+    <title>Wi-Fi Mobile App (Advanced Sync UI)</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
@@ -377,11 +377,11 @@
 </div>
 
 <script>
-    // FIX: သင့်ရဲ့ Firebase Realtime Database URL အမှန်ကို အစားထိုးပြင်ဆင်ပေးပြီးပါပြီ
+    // Firebase Configurations
     var firebaseConfig = {
       apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
       authDomain: "shwe-meza-net-wifi.firebaseapp.com",
-      databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "shwe-meza-net-wifi",
       storageBucket: "shwe-meza-net-wifi.firebasestorage.app",
       messagingSenderId: "441871786600",
@@ -389,9 +389,11 @@
       measurementId: "G-GCGLTXZD9Z"
     };
 
+    // Firebase Initialization (v8 SDK)
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
 
+    // Global System State
     window.systemDB = {
         adminId: "admin", adminPassword: "admin123", totalProfit: 0, enableRefund: true,
         packages: [
@@ -405,34 +407,36 @@
     var currentLoggedInAgent = null;
     var temporaryAgentInventory = []; 
     var editingAgentIndex = null; 
+    var isInitialLoadFinished = false;
 
+    // Secure Firebase Realtime Listener (Granular Separation)
     db.ref("wifi_system").on("value", function(snapshot) {
         var cloudData = snapshot.val();
         if(cloudData) {
-            window.systemDB = {
-                adminId: cloudData.adminId || "admin",
-                adminPassword: cloudData.adminPassword || "admin123",
-                totalProfit: cloudData.totalProfit || 0,
-                enableRefund: cloudData.enableRefund !== undefined ? cloudData.enableRefund : true,
-                packages: cloudData.packages || [],
-                wifiCodes: cloudData.wifiCodes || {},
-                agents: cloudData.agents || [],
-                currentDevices: cloudData.currentDevices || {},
-                purchaseLogs: cloudData.purchaseLogs || [],
-                errorReports: cloudData.errorReports || []
-            };
+            window.systemDB.adminId = cloudData.adminId || "admin";
+            window.systemDB.adminPassword = cloudData.adminPassword || "admin123";
+            window.systemDB.totalProfit = cloudData.totalProfit || 0;
+            window.systemDB.enableRefund = cloudData.enableRefund !== undefined ? cloudData.enableRefund : true;
+            window.systemDB.packages = cloudData.packages || [];
+            window.systemDB.wifiCodes = cloudData.wifiCodes || {};
+            window.systemDB.agents = cloudData.agents || [];
+            window.systemDB.currentDevices = cloudData.currentDevices || {};
+            window.systemDB.purchaseLogs = cloudData.purchaseLogs || [];
+            window.systemDB.errorReports = cloudData.errorReports || []
             
-            if (!window.systemDB.wifiCodes) window.systemDB.wifiCodes = {};
+            // Ensure array allocations for custom packages
             window.systemDB.packages.forEach(function(p) { 
                 if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; 
             });
         } else {
+            // First time setup inside database
             window.systemDB.wifiCodes = { "1_hour": [], "1_day": [] };
             db.ref("wifi_system").set(window.systemDB);
         }
 
         document.getElementById('dbLoadingOverlay').style.display = 'none';
 
+        // Secure Agent Sync Session without losing input values
         if(currentLoggedInAgent) {
             var freshAgentState = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
             if(freshAgentState) {
@@ -442,11 +446,18 @@
             setupAgentDashboard();
         }
         refreshAdminData();
+
+        // Handle Safe Auto-Login Route
+        if(!isInitialLoadFinished) {
+            isInitialLoadFinished = true;
+            executeAutoLoginCheck();
+        }
     }, function(error) {
-        console.error("Firebase Read Error: ", error);
+        console.error("Firebase Sync Error: ", error);
         alert("ဒေတာဘေ့စ် ချိတ်ဆက်မှု ပျက်ပြားပါသည်: " + error.message);
     });
 
+    // Atomic Database Updates instead of Bulk Overwriting
     window.saveStateToFirebase = function() {
         db.ref("wifi_system").set(window.systemDB);
     }
@@ -459,6 +470,7 @@
         window.scrollTo(0, 0); 
     }
 
+    // ====== LOGIN & LOGOUT ======
     window.handleLogin = function() {
         var errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = "none";
@@ -469,21 +481,20 @@
             errorArea.innerText = "⚠️ ID နှင့် စကားဝှက်ကို ဖြည့်စွက်ပေးပါဗျာ။";
             errorArea.style.display = "block"; return;
         }
-        if(idIn === systemDB.adminId.toLowerCase() && passIn === systemDB.adminPassword) {
+        if(idIn === window.systemDB.adminId.toLowerCase() && passIn === window.systemDB.adminPassword) {
             localStorage.setItem('loggedInUserId', 'admin'); localStorage.setItem('userRole', 'admin');
             document.getElementById('loginId').value = ""; document.getElementById('loginPassword').value = "";
             refreshAdminData(); showPage('adminPage'); return;
         }
 
-        var foundAgent = systemDB.agents.find(function(a) { return a.id.toLowerCase() === idIn && a.pass === passIn; });
+        var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === idIn && a.pass === passIn; });
         if(foundAgent) {
             var myDeviceId = localStorage.getItem('my_device_id');
             if (!myDeviceId) {
                 myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('my_device_id', myDeviceId);
             }
-            if(!systemDB.currentDevices) systemDB.currentDevices = {};
-            var activeDeviceIdInDB = systemDB.currentDevices[foundAgent.id.toLowerCase()];
+            var activeDeviceIdInDB = window.systemDB.currentDevices ? window.systemDB.currentDevices[foundAgent.id.toLowerCase()] : null;
 
             if (activeDeviceIdInDB && myDeviceId !== activeDeviceIdInDB) {
                 errorArea.innerText = "❌ ဤအကောင့်အား အခြားစက်တစ်ခုတွင် လော့ဂ်အင်ဝင်ထားပြီးဖြစ်၍ ဝင်ရောက်ခွင့်မရှိပါ!";
@@ -506,14 +517,31 @@
         currentLoggedInAgent = null; temporaryAgentInventory = []; showPage('loginPage');
     }
 
+    function executeAutoLoginCheck() {
+        var savedUserId = localStorage.getItem('loggedInUserId');
+        var savedRole = localStorage.getItem('userRole');
+        if(savedUserId && savedRole && window.systemDB && window.systemDB.agents) {
+            if(savedRole === 'admin') { refreshAdminData(); showPage('adminPage'); } 
+            else if(savedRole === 'agent') {
+                var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === savedUserId; });
+                if(foundAgent) {
+                    currentLoggedInAgent = foundAgent; 
+                    temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
+                    setupAgentDashboard(); showPage('agentPage');
+                }
+            }
+        }
+    }
+
+    // ====== ADMIN MANAGEMENT METHODS ======
     window.refreshAdminData = function() {
         if(!window.systemDB) return;
         
         var stockContainer = document.getElementById('adminStockTableBody');
         if (stockContainer) {
             stockContainer.innerHTML = "";
-            systemDB.packages.forEach(function(p) {
-                var count = systemDB.wifiCodes[p.id] ? systemDB.wifiCodes[p.id].length : 0;
+            window.systemDB.packages.forEach(function(p) {
+                var count = window.systemDB.wifiCodes[p.id] ? window.systemDB.wifiCodes[p.id].length : 0;
                 stockContainer.innerHTML += `
                     <div class="data-card-item">
                         <span class="title">📦 ${p.name}</span>
@@ -528,7 +556,7 @@
         var pkgContainer = document.getElementById('adminPackageSettingsTable');
         if(pkgContainer) {
             pkgContainer.innerHTML = "";
-            systemDB.packages.forEach(function(pkg, index) {
+            window.systemDB.packages.forEach(function(pkg, index) {
                 var actionBtn = (pkg.id !== "1_hour" && pkg.id !== "1_day") ? 
                     `<button class="btn-danger btn-sm" onclick="deletePackage(${index})">X ဖျက်မည်</button>` : `<span style="color:var(--gray); font-size:11px;">စနစ်ပါကုဒ်</span>`;
                 pkgContainer.innerHTML += `
@@ -540,14 +568,14 @@
             });
         }
 
-        document.getElementById('lblTotalProfit').innerText = systemDB.totalProfit + " Ks";
-        document.getElementById('chkEnableRefund').checked = systemDB.enableRefund;
+        document.getElementById('lblTotalProfit').innerText = window.systemDB.totalProfit + " Ks";
+        document.getElementById('chkEnableRefund').checked = window.systemDB.enableRefund;
 
         var agentContainer = document.getElementById('adminAgentTable');
         if(agentContainer) {
             agentContainer.innerHTML = "";
-            if(systemDB.agents && systemDB.agents.length > 0) {
-                systemDB.agents.forEach(function(agent, index) {
+            if(window.systemDB.agents && window.systemDB.agents.length > 0) {
+                window.systemDB.agents.forEach(function(agent, index) {
                     agentContainer.innerHTML += `
                         <div class="card" style="padding:14px; margin-bottom:10px; background:var(--gray-light);">
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
@@ -570,7 +598,7 @@
 
         var settContainer = document.getElementById('adminSettlementTable');
         settContainer.innerHTML = "";
-        var pendingRequests = systemDB.agents ? systemDB.agents.filter(function(a) { return a.settlementStatus === "pending"; }) : [];
+        var pendingRequests = window.systemDB.agents ? window.systemDB.agents.filter(function(a) { return a.settlementStatus === "pending"; }) : [];
         if(pendingRequests.length === 0) {
             settContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">တောင်းဆိုမှုမရှိသေးပါ။</p>`;
         } else {
@@ -586,12 +614,12 @@
 
         var logsContainer = document.getElementById('adminLogsTable');
         logsContainer.innerHTML = "";
-        if(!systemDB.purchaseLogs || systemDB.purchaseLogs.length === 0) {
+        if(!window.systemDB.purchaseLogs || window.systemDB.purchaseLogs.length === 0) {
             logsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">မှတ်တမ်းမရှိသေးပါ။</p>`;
         } else {
-            [].concat(systemDB.purchaseLogs).reverse().forEach(function(log, revIdx) {
-                var actualIndex = systemDB.purchaseLogs.length - 1 - revIdx; 
-                var targetPkg = systemDB.packages.find(function(p) { return p.id === log.package; });
+            [].concat(window.systemDB.purchaseLogs).reverse().forEach(function(log, revIdx) {
+                var actualIndex = window.systemDB.purchaseLogs.length - 1 - revIdx; 
+                var targetPkg = window.systemDB.packages.find(function(p) { return p.id === log.package; });
                 var pkgLabel = targetPkg ? targetPkg.name.split(" ")[0] : log.package;
                 logsContainer.innerHTML += `
                     <div class="data-card-item" style="align-items: center;">
@@ -607,11 +635,11 @@
 
         var reportsContainer = document.getElementById('adminReportsTable');
         reportsContainer.innerHTML = "";
-        if(!systemDB.errorReports || systemDB.errorReports.length === 0) {
+        if(!window.systemDB.errorReports || window.systemDB.errorReports.length === 0) {
             reportsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">Report မရှိသေးပါ။</p>`;
         } else {
-            systemDB.errorReports.forEach(function(report, index) {
-                var actionBtn = systemDB.enableRefund ? 
+            window.systemDB.errorReports.forEach(function(report, index) {
+                var actionBtn = window.systemDB.enableRefund ? 
                     `<button class="btn-danger btn-sm" onclick="processRefundAndClose(${index})">နုတ်/အမ်းမည်</button>` : `<button class="btn-success btn-sm" onclick="deleteReport(${index})" style="background:#64748b;">ဖျက်မည်</button>`;
                 reportsContainer.innerHTML += `
                     <div class="card" style="padding:12px; margin-bottom:10px; background:#fff5f5;">
@@ -629,8 +657,8 @@
 
     window.deletePurchaseLog = function(index) {
         if(confirm("⚠️ ဤဝယ်ယူမှုမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?")) {
-            systemDB.purchaseLogs.splice(index, 1);
-            saveStateToFirebase();
+            window.systemDB.purchaseLogs.splice(index, 1);
+            db.ref("wifi_system/purchaseLogs").set(window.systemDB.purchaseLogs);
         }
     }
 
@@ -639,8 +667,7 @@
         if(ask !== null) {
             var newAmt = parseInt(ask);
             if(!isNaN(newAmt)) {
-                systemDB.totalProfit = newAmt;
-                saveStateToFirebase();
+                db.ref("wifi_system/totalProfit").set(newAmt);
                 alert(`✅ ဝင်ငွေစုစုပေါင်းကို ${newAmt} Ks သို့ ပြောင်းလဲသတ်မှတ်ပြီးပါပြီဗျာ။`);
             } else {
                 alert("❌ ဂဏန်းအမှန်ကိုသာ ရိုက်ထည့်ပေးပါဗျာ။");
@@ -655,21 +682,21 @@
         
         var tokens = bulkText.split(/[\s,\n\r\t]+/);
         var codesFiltered = tokens.map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
-        
-        if(codesFiltered.length === 0) return alert("⚠️ မှန်ကန်သော ကုဒ်စာသားများ ရှာမတွေ့ပါ။");
+        if(codesFiltered.length === 0) return alert("⚠️ မျှော်လင့်ထားသော ကုဒ်စာသားများ ရှာမတွေ့ပါ။");
 
-        if(!systemDB.wifiCodes[pkg]) systemDB.wifiCodes[pkg] = [];
+        if(!window.systemDB.wifiCodes[pkg]) window.systemDB.wifiCodes[pkg] = [];
         var added = 0; var dup = 0;
 
         codesFiltered.forEach(function(code) {
-            if(!systemDB.wifiCodes[pkg].includes(code)) {
-                systemDB.wifiCodes[pkg].push(code); added++;
+            if(!window.systemDB.wifiCodes[pkg].includes(code)) {
+                window.systemDB.wifiCodes[pkg].push(code); added++;
             } else { dup++; }
         });
 
-        alert(`✅ ကုဒ်အလုံးအရင်း သိမ်းဆည်းပြီးပါပြီ။\n- ကုဒ်အသစ်ပေါင်း: (${added}) ခု ထည့်သွင်းပြီး\n- ထပ်နေ၍ပယ်ဖျက်သည်: (${dup}) ခု`);
-        document.getElementById('bulkPasteInput').value = "";
-        saveStateToFirebase();
+        db.ref("wifi_system/wifiCodes/" + pkg).set(window.systemDB.wifiCodes[pkg]).then(function() {
+            alert(`✅ ကုဒ်အလုံးအရင်း သိမ်းဆည်းပြီးပါပြီ။\n- ကုဒ်အသစ်ပေါင်း: (${added}) ခု ထည့်သွင်းပြီး\n- ထပ်နေ၍ပယ်ဖျက်သည်: (${dup}) ခု`);
+            document.getElementById('bulkPasteInput').value = "";
+        });
     }
 
     window.processPDFFile = function() {
@@ -711,21 +738,31 @@
         var name = document.getElementById('txtNewPkgName').value.trim();
         var price = parseInt(document.getElementById('txtNewPkgPrice').value) || 0;
         if(!id || !name || price <= 0) return alert("⚠️ အချက်အလက်များ မှန်ကန်စွာ ဖြည့်စွက်ပေးပါဦးဗျာ။");
-        if(systemDB.packages.some(function(p) { return p.id === id; })) return alert("⚠️ ဤ Package ID ရှိပြီးသား ဖြစ်နေသည်။");
+        if(window.systemDB.packages.some(function(p) { return p.id === id; })) return alert("⚠️ ဤ Package ID ရှိပြီးသား ဖြစ်နေသည်။");
         
-        systemDB.packages.push({ id: id, name: name, price: price });
-        systemDB.wifiCodes[id] = []; 
-        document.getElementById('txtNewPkgId').value = ""; document.getElementById('txtNewPkgName').value = ""; document.getElementById('txtNewPkgPrice').value = "";
-        alert(`✅ Package '${name}' ထည့်သွင်းပြီးပါပြီ။`); saveStateToFirebase();
+        window.systemDB.packages.push({ id: id, name: name, price: price });
+        
+        var updates = {};
+        updates["wifi_system/packages"] = window.systemDB.packages;
+        updates["wifi_system/wifiCodes/" + id] = [];
+        
+        db.ref().update(updates).then(function() {
+            document.getElementById('txtNewPkgId').value = ""; 
+            document.getElementById('txtNewPkgName').value = ""; 
+            document.getElementById('txtNewPkgPrice').value = "";
+            alert(`✅ Package '${name}' ထည့်သွင်းပြီးပါပြီ။`);
+        });
     }
 
     window.deletePackage = function(index) {
-        var pkg = systemDB.packages[index];
+        var pkg = window.systemDB.packages[index];
         var adminPwd = prompt(`⚠️ '${pkg.name}' ကို ဖျက်ရန် အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -`);
-        if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းသဖြင့် ဖျက်ခွင့်မရှိပါ။");
-        if (systemDB.wifiCodes[pkg.id]) delete systemDB.wifiCodes[pkg.id]; 
-        systemDB.packages.splice(index, 1); 
-        saveStateToFirebase();
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းသဖြင့် ဖျက်ခွင့်မရှိပါ။");
+        
+        window.systemDB.packages.splice(index, 1); 
+        
+        db.ref("wifi_system/packages").set(window.systemDB.packages);
+        db.ref("wifi_system/wifiCodes/" + pkg.id).remove();
     }
 
     function updateAllPackageSelectBoxes() {
@@ -733,7 +770,7 @@
         selectors.forEach(function(selectId) {
             var el = document.getElementById(selectId); if(!el) return;
             var currentVal = el.value; el.innerHTML = "";
-            systemDB.packages.forEach(function(pkg) {
+            window.systemDB.packages.forEach(function(pkg) {
                 var opt = document.createElement('option'); opt.value = pkg.id; opt.innerText = pkg.name; el.appendChild(opt);
             });
             if([...el.options].some(function(o) { return o.value === currentVal; })) { el.value = currentVal; }
@@ -741,7 +778,7 @@
     }
 
     window.startEditAgent = function(index) {
-        editingAgentIndex = index; var agent = systemDB.agents[index];
+        editingAgentIndex = index; var agent = window.systemDB.agents[index];
         document.getElementById('agentFormTitle').innerText = `📝 Agent (${agent.id.toUpperCase()}) ပြင်ဆင်ရန်`;
         document.getElementById('newAgentId').value = agent.id; document.getElementById('newAgentId').disabled = true; 
         document.getElementById('newAgentName').value = agent.name; document.getElementById('newAgentPass').value = agent.pass; document.getElementById('newAgentComm').value = agent.comm;
@@ -765,44 +802,69 @@
         var pass = document.getElementById('newAgentPass').value.trim();
         var comm = parseInt(document.getElementById('newAgentComm').value);
         var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
-        if (adminPwd !== systemDB.adminPassword) return alert("❌ Admin Password မှားယွင်းနေပါသည်!");
-        var agent = systemDB.agents[editingAgentIndex]; agent.name = name; agent.pass = pass; agent.comm = comm;
-        alert(`✅ အချက်အလက်များ ပြင်ဆင်သိမ်းဆည်းပြီးပါပြီ။`); cancelEditAgentMode(); saveStateToFirebase();
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Admin Password မှားယွင်းနေပါသည်!");
+        
+        db.ref("wifi_system/agents/" + editingAgentIndex).update({
+            name: name, pass: pass, comm: comm
+        }).then(function() {
+            alert(`✅ အချက်အလက်များ ပြင်ဆင်သိမ်းဆည်းပြီးပါပြီ။`); cancelEditAgentMode();
+        });
     }
 
     window.approveSettlement = function(agentId) {
-        var agentIndex = systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === agentId.toLowerCase(); });
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === agentId.toLowerCase(); });
         if(agentIndex !== -1) {
             var adminPwd = prompt("🔑 ဤလုပ်ဆောင်ချက်ကို အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
-            if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်။");
-            var agent = systemDB.agents[agentIndex];
-            systemDB.totalProfit += agent.toPayAdmin; 
+            if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်။");
+            var agent = window.systemDB.agents[agentIndex];
             
-            db.ref("wifi_system/totalProfit").set(systemDB.totalProfit);
-            db.ref("wifi_system/agents/" + agentIndex + "/toPayAdmin").set(0);
-            db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("normal");
-            alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ Ngweစာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`); 
+            var targetProfitNode = window.systemDB.totalProfit + agent.toPayAdmin;
+            
+            var updates = {};
+            updates["wifi_system/totalProfit"] = targetProfitNode;
+            updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = 0;
+            updates["wifi_system/agents/" + agentIndex + "/settlementStatus"] = "normal";
+            
+            db.ref().update(updates).then(function() {
+                alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ ငွေစာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`); 
+            });
         }
     }
 
     window.processRefundAndClose = function(index) {
-        var report = systemDB.errorReports[index];
-        var agentIndex = systemDB.agents.findIndex(function(a) { return a.id.toUpperCase() === report.agentId.toUpperCase(); });
+        var report = window.systemDB.errorReports[index];
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toUpperCase() === report.agentId.toUpperCase(); });
+        
+        var updates = {};
         if (agentIndex !== -1) {
-            var targetAgent = systemDB.agents[agentIndex];
-            var targetPkg = systemDB.packages.find(function(p) { return p.id === report.package; });
+            var targetAgent = window.systemDB.agents[agentIndex];
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === report.package; });
             var cardPrice = targetPkg ? targetPkg.price : 0;
             var agentRefundComm = cardPrice * (targetAgent.comm / 100); 
             var ownerRefundNet = cardPrice - agentRefundComm;          
-            targetAgent.earned -= agentRefundComm; targetAgent.toPayAdmin -= ownerRefundNet;
-            if(targetAgent.toPayAdmin < 0) targetAgent.toPayAdmin = 0;
-            alert(`🎉 Ngwe ပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: ${agentRefundComm} Ks\n- Owner Cost Deduct: ${ownerRefundNet} Ks`);
+            
+            var nextEarned = (targetAgent.earned || 0) - agentRefundComm;
+            var nextToPay = (targetAgent.toPayAdmin || 0) - ownerRefundNet;
+            if(nextToPay < 0) nextToPay = 0;
+            
+            updates["wifi_system/agents/" + agentIndex + "/earned"] = nextEarned;
+            updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = nextToPay;
         }
-        systemDB.errorReports.splice(index, 1); saveStateToFirebase();
+        
+        window.systemDB.errorReports.splice(index, 1);
+        updates["wifi_system/errorReports"] = window.systemDB.errorReports;
+        
+        db.ref().update(updates).then(function() {
+            alert(`🎉 ငွေပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: နှုတ်ပယ်ပြီး\n- Owner Net Deduct: နှုတ်ပယ်ပြီး`);
+        });
     }
 
-    window.deleteReport = function(index) { systemDB.errorReports.splice(index, 1); saveStateToFirebase(); }
+    window.deleteReport = function(index) { 
+        window.systemDB.errorReports.splice(index, 1); 
+        db.ref("wifi_system/errorReports").set(window.systemDB.errorReports); 
+    }
 
+    // ====== SCAN PROCESS LOGICS ======
     window.showOptionsModal = function() {
         var fileInput = document.getElementById('imageInput');
         if(fileInput.files.length === 0) return;
@@ -858,22 +920,25 @@
         var pkg = document.getElementById('uploadPackageSelect').value;
         var inputs = document.querySelectorAll('.code-edit-input');
         var addedCount = 0; var duplicateCount = 0;
-        if (!systemDB.wifiCodes[pkg]) systemDB.wifiCodes[pkg] = [];
+        
+        if (!window.systemDB.wifiCodes[pkg]) window.systemDB.wifiCodes[pkg] = [];
         inputs.forEach(function(input) {
             var val = input.value.trim();
             if(val !== "") {
-                if (!systemDB.wifiCodes[pkg].includes(val)) {
-                    systemDB.wifiCodes[pkg].push(val); addedCount++;
+                if (!window.systemDB.wifiCodes[pkg].includes(val)) {
+                    window.systemDB.wifiCodes[pkg].push(val); addedCount++;
                 } else { duplicateCount++; }
             }
         });
-        alert(`သိမ်းဆည်းပြီး။ ကုဒ်အသစ် (${addedCount}) ခု ထည့်သွင်းပြီး၊ ထပ်နေသောကုဒ် (${duplicateCount}) ခုကို ပယ်ဖျက်ပြီး။`);
-        document.getElementById('editArea').style.display = "none";
-        document.getElementById('imageInput').value = "";
-        document.getElementById('pdfFileInput').value = "";
-        document.getElementById('status').innerText = "";
-        document.getElementById('pdfStatus').innerText = "";
-        saveStateToFirebase();
+        
+        db.ref("wifi_system/wifiCodes/" + pkg).set(window.systemDB.wifiCodes[pkg]).then(function() {
+            alert(`သိမ်းဆည်းပြီး။ ကုဒ်အသစ် (${addedCount}) ခု ထည့်သွင်းပြီး၊ ထပ်နေသောကုဒ် (${duplicateCount}) ခုကို ပယ်ဖျက်ပြီး။`);
+            document.getElementById('editArea').style.display = "none";
+            document.getElementById('imageInput').value = "";
+            document.getElementById('pdfFileInput').value = "";
+            document.getElementById('status').innerText = "";
+            document.getElementById('pdfStatus').innerText = "";
+        });
     }
 
     window.createAgentAccount = function() {
@@ -882,39 +947,58 @@
         var pass = document.getElementById('newAgentPass').value.trim();
         var comm = parseInt(document.getElementById('newAgentComm').value);
         if(!id || !name || !pass || isNaN(comm)) return alert("အချက်အလက် ဖြည့်စွက်ပါဦး။");
-        if(id === "admin" || (systemDB.agents && systemDB.agents.some(function(a) { return a.id.toLowerCase() === id; }))) return alert("⚠️ ဤ Agent ID ရှိပြီးသားဖြစ်သည်!");
-        if(!systemDB.agents) systemDB.agents = [];
-        systemDB.agents.push({ id: id, name: name, pass: pass, comm: comm, earned: 0, toPayAdmin: 0, settlementStatus: "normal", myInventory: [] });
-        document.getElementById('newAgentId').value = ""; document.getElementById('newAgentName').value = ""; document.getElementById('newAgentPass').value = ""; document.getElementById('newAgentComm').value = "";
-        alert(`✅ အေးဂျင့်အကောင့် ဆောက်ပြီးပါပြီ။`); saveStateToFirebase();
+        if(id === "admin" || (window.systemDB.agents && window.systemDB.agents.some(function(a) { return a.id.toLowerCase() === id; }))) return alert("⚠️ ဤ Agent ID ရှိပြီးသားဖြစ်သည်!");
+        
+        if(!window.systemDB.agents) window.systemDB.agents = [];
+        window.systemDB.agents.push({ id: id, name: name, pass: pass, comm: comm, earned: 0, toPayAdmin: 0, settlementStatus: "normal", myInventory: [] });
+        
+        db.ref("wifi_system/agents").set(window.systemDB.agents).then(function() {
+            document.getElementById('newAgentId').value = ""; 
+            document.getElementById('newAgentName').value = ""; 
+            document.getElementById('newAgentPass').value = ""; 
+            document.getElementById('newAgentComm').value = "";
+            alert(`✅ အေးဂျင့်အကောင့် ဆောက်ပြီးပါပြီ။`);
+        });
     }
 
     window.deleteAgentAccount = function(index) {
         if(confirm("ဤအကောင့်ကို ဖျက်ရန် သေချာပါသလား?")) {
             var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
-            if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
-            systemDB.agents.splice(index, 1);
-            if(editingAgentIndex === index) cancelEditAgentMode();
-            saveStateToFirebase();
+            if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
+            
+            window.systemDB.agents.splice(index, 1);
+            db.ref("wifi_system/agents").set(window.systemDB.agents).then(function() {
+                if(editingAgentIndex === index) cancelEditAgentMode();
+            });
         }
     }
 
     window.unlockAgentDevice = function(agentId) {
-        if(!systemDB.currentDevices || !systemDB.currentDevices[agentId.toLowerCase()]) return alert("Lock ကျမနေပါဗျာ။");
+        if(!window.systemDB.currentDevices || !window.systemDB.currentDevices[agentId.toLowerCase()]) return alert("Lock ကျမနေပါဗျာ။");
         var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
-        if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
-        db.ref("wifi_system/currentDevices/" + agentId.toLowerCase()).remove();
-        alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။`);
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
+        
+        db.ref("wifi_system/currentDevices/" + agentId.toLowerCase()).remove().then(function() {
+            alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။`);
+        });
     }
 
     window.saveAdminSettings = function() {
         var adminPwd = prompt("🔑 ဆက်တင်သိမ်းရန် Admin Password ရိုက်ထည့်ပါ -");
-        if (adminPwd !== systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
-        systemDB.adminPassword = document.getElementById('txtAdminPass').value.trim();
-        systemDB.enableRefund = document.getElementById('chkEnableRefund').checked;
-        alert("💾 ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။"); saveStateToFirebase();
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
+        
+        var nextPass = document.getElementById('txtAdminPass').value.trim();
+        var nextRefund = document.getElementById('chkEnableRefund').checked;
+        
+        db.ref("wifi_system").update({
+            adminPassword: nextPass,
+            enableRefund: nextRefund
+        }).then(function() {
+            alert("💾 ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။");
+        });
     }
 
+    // ==================== 👥 AGENT DASHBOARD METHODS ====================
     window.setupAgentDashboard = function() {
         if(!currentLoggedInAgent) return;
         document.getElementById('currentAgentLabel').innerText = `${currentLoggedInAgent.name} (${currentLoggedInAgent.id.toUpperCase()})`;
@@ -933,7 +1017,7 @@
 
     window.updateBuyPriceLabel = function() {
         var pkgId = document.getElementById('buyPackageSelect').value;
-        var targetPkg = systemDB.packages.find(function(p) { return p.id === pkgId; });
+        var targetPkg = window.systemDB.packages.find(function(p) { return p.id === pkgId; });
         if(targetPkg) document.getElementById('lblSellPrice').innerText = targetPkg.price;
     }
 
@@ -944,6 +1028,7 @@
     }
     window.closePwdBox = function() { document.getElementById('pwdConfirmBox').style.display = "none"; }
 
+    // Transaction-Safe Atomic Buying Operation
     window.executeBuyCodesConfirmed = function() {
         if(document.getElementById('txtAgentActionPwd').value.trim() !== currentLoggedInAgent.pass) return alert("❌ Password မှားယွင်းနေပါသည်။");
         closePwdBox(); 
@@ -951,44 +1036,47 @@
         var pkg = document.getElementById('buyPackageSelect').value;
         var count = parseInt(document.getElementById('buyCountSelect').value);
         
-        var agentIndex = systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
         if (agentIndex === -1) return alert("စနစ်အမှားအယွင်း ဖြစ်သွားပါသည်!");
 
-        if(!systemDB.wifiCodes[pkg] || systemDB.wifiCodes[pkg].length < count) {
-            var avl = systemDB.wifiCodes[pkg] ? systemDB.wifiCodes[pkg].length : 0;
-            return alert(`❌ ကုဒ်မလုံလောက်ပါ။ လက်ကျန်: ${avl} ခုပဲ ရှိပါသည်။`);
-        }
-        
-        var codesExtracted = []; 
-        var sourceArray = systemDB.wifiCodes[pkg];
-        for (var i = 0; i < count; i++) { 
-            if (sourceArray.length > 0) codesExtracted.push(sourceArray.shift()); 
-        }
-        
-        var targetPkg = systemDB.packages.find(function(p) { return p.id === pkg; });
-        var currentPrice = targetPkg ? targetPkg.price : 0;
-        
-        if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
-        codesExtracted.forEach(function(codeStr) {
-            currentLoggedInAgent.myInventory.push({ code: codeStr, package: pkg, price: currentPrice, status: 'bought' });
-        });
-        
-        if(!systemDB.purchaseLogs) systemDB.purchaseLogs = [];
-        systemDB.purchaseLogs.push({ 
-            time: new Date().toLocaleTimeString(), 
-            agentId: currentLoggedInAgent.id.toUpperCase(), 
-            package: pkg, 
-            count: count, 
-            totalPrice: (currentPrice * count) 
-        });
+        // Dynamic cloud reload verification just before database write transaction
+        db.ref("wifi_system/wifiCodes/" + pkg).get().then(function(snapshot) {
+            var freshCodesList = snapshot.val() || [];
+            if(freshCodesList.length < count) {
+                return alert(`❌ ကုဒ်မလုံလောက်တော့ပါ။ အခြားသူယူသွားနိုင်ပါသည်။ လက်ကျန်: ${freshCodesList.length} ခုပဲ ရှိပါသည်။`);
+            }
+            
+            // Atomically extract specific nodes from database
+            var codesExtracted = [];
+            for (var i = 0; i < count; i++) {
+                codesExtracted.push(freshCodesList.shift());
+            }
+            
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === pkg; });
+            var currentPrice = targetPkg ? targetPkg.price : 0;
+            
+            if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
+            codesExtracted.forEach(function(codeStr) {
+                currentLoggedInAgent.myInventory.push({ code: codeStr, package: pkg, price: currentPrice, status: 'bought' });
+            });
+            
+            if(!window.systemDB.purchaseLogs) window.systemDB.purchaseLogs = [];
+            window.systemDB.purchaseLogs.push({ 
+                time: new Date().toLocaleTimeString(), 
+                agentId: currentLoggedInAgent.id.toUpperCase(), 
+                package: pkg, 
+                count: count, 
+                totalPrice: (currentPrice * count) 
+            });
 
-        var updates = {};
-        updates["wifi_system/wifiCodes/" + pkg] = sourceArray;
-        updates["wifi_system/purchaseLogs"] = systemDB.purchaseLogs;
-        updates["wifi_system/agents/" + agentIndex + "/myInventory"] = currentLoggedInAgent.myInventory;
-        
-        db.ref().update(updates).then(function() {
-            alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။");
+            var updates = {};
+            updates["wifi_system/wifiCodes/" + pkg] = freshCodesList;
+            updates["wifi_system/purchaseLogs"] = window.systemDB.purchaseLogs;
+            updates["wifi_system/agents/" + agentIndex + "/myInventory"] = currentLoggedInAgent.myInventory;
+            
+            db.ref().update(updates).then(function() {
+                alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။");
+            });
         });
     }
 
@@ -999,7 +1087,7 @@
         areaDiv.style.display = "block"; container.innerHTML = "";
         
         temporaryAgentInventory.forEach(function(item, index) {
-            var targetPkg = systemDB.packages.find(function(p) { return p.id === item.package; });
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === item.package; });
             var badgeType = targetPkg ? targetPkg.name.split(" ")[0] : item.package.toUpperCase();
             if(item.status === 'sold') {
                 container.innerHTML += `
@@ -1021,7 +1109,7 @@
         var printText = `<h3>ရွှေမဲဇာ ဝိုင်ဖိုင် ကတ်များစာရင်း</h3><hr>`;
         temporaryAgentInventory.forEach(function(item, index) {
             if(item.status !== 'sold') {
-                var targetPkg = systemDB.packages.find(function(p) { return p.id === item.package; });
+                var targetPkg = window.systemDB.packages.find(function(p) { return p.id === item.package; });
                 printText += `<p>${index+1}) ${targetPkg ? targetPkg.name : item.package} : <b>${item.code}</b></p>`;
             }
         });
@@ -1029,21 +1117,21 @@
     }
 
     window.markAsIndividualSold = function(index) {
-        var agentIndex = systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
         if(agentIndex === -1) return;
 
         var item = temporaryAgentInventory[index]; 
         item.status = 'sold';
         
         var profitEarned = item.price * (currentLoggedInAgent.comm / 100); 
-        currentLoggedInAgent.earned = (currentLoggedInAgent.earned || 0) + profitEarned; 
-        currentLoggedInAgent.toPayAdmin = (currentLoggedInAgent.toPayAdmin || 0) + (item.price - profitEarned);
-        currentLoggedInAgent.myInventory = temporaryAgentInventory;
+        var nextEarned = (currentLoggedInAgent.earned || 0) + profitEarned; 
+        var nextToPayAdmin = (currentLoggedInAgent.toPayAdmin || 0) + (item.price - profitEarned);
 
         var updates = {};
-        updates["wifi_system/agents/" + agentIndex + "/earned"] = currentLoggedInAgent.earned;
-        updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = currentLoggedInAgent.toPayAdmin;
-        updates["wifi_system/agents/" + agentIndex + "/myInventory"] = currentLoggedInAgent.myInventory;
+        updates["wifi_system/agents/" + agentIndex + "/earned"] = nextEarned;
+        updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = nextToPayAdmin;
+        updates["wifi_system/agents/" + agentIndex + "/myInventory"] = temporaryAgentInventory;
+        
         db.ref().update(updates);
     }
 
@@ -1051,11 +1139,12 @@
         var rawText = ""; var activeItems = temporaryAgentInventory.filter(function(i) { return i.status !== 'sold'; });
         if(activeItems.length === 0) return alert("မရောင်းရသေးသော ကုဒ်စာရင်းမရှိပါ။");
         activeItems.forEach(function(item, idx) {
-            var targetPkg = systemDB.packages.find(function(p) { return p.id === item.package; });
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === item.package; });
             rawText += `${idx+1}) ${targetPkg ? targetPkg.name : item.package}: ${item.code}\n`;
         });
         navigator.clipboard.writeText(rawText); alert("📋 Copy ကူးယူပြီးပါပြီဗျာ။");
     }
+    
     window.printCodesSection = function() {
         if(temporaryAgentInventory.filter(function(i) { return i.status !== 'sold'; }).length === 0) return alert("ပရင့်ထုတ်ရန် ကုဒ်မရှိပါ။");
         window.print();
@@ -1066,7 +1155,7 @@
         var agentPwd = prompt(`🔑 ကျသင့်ငွေ ${currentLoggedInAgent.toPayAdmin} Ks ရှင်းရန် သင့်အကောင့် Password ကို ရိုက်ထည့်ပါ -`);
         if (agentPwd !== currentLoggedInAgent.pass) return alert("❌ Password မှားယွင်းနေပါသည်!");
         
-        var agentIndex = systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
         if(agentIndex !== -1) {
             db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("pending");
             alert("✅ Ngwe ရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။");
@@ -1078,31 +1167,19 @@
         var codeIn = document.getElementById('reportErrorCodeInput').value.trim();
         var reasonIn = document.getElementById('reportErrorReasonInput').value.trim();
         if(!codeIn || !reasonIn) return alert("⚠️ အချက်အလက်များကို ဖြည့်စွက်ပေးပါ။");
-        if(!systemDB.errorReports) systemDB.errorReports = [];
-        systemDB.errorReports.push({ agentId: currentLoggedInAgent.id.toUpperCase(), package: pkgIn, errorCode: codeIn, reason: reasonIn });
-        alert("⚠️ ပိုင်ရှင်ထံသို့ Error တင်ပြပေးလိုက်ပါပြီ။");
-        document.getElementById('reportErrorCodeInput').value = ""; document.getElementById('reportErrorReasonInput').value = "";
-        saveStateToFirebase();
+        
+        if(!window.systemDB.errorReports) window.systemDB.errorReports = [];
+        window.systemDB.errorReports.push({ agentId: currentLoggedInAgent.id.toUpperCase(), package: pkgIn, errorCode: codeIn, reason: reasonIn });
+        
+        db.ref("wifi_system/errorReports").set(window.systemDB.errorReports).then(function() {
+            alert("⚠️ ပိုင်ရှင်ထံသို့ Error တင်ပြပေးလိုက်ပါပြီ။");
+            document.getElementById('reportErrorCodeInput').value = ""; 
+            document.getElementById('reportErrorReasonInput').value = "";
+        });
     }
 
     window.addEventListener('DOMContentLoaded', function() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        
-        setTimeout(function() {
-            var savedUserId = localStorage.getItem('loggedInUserId');
-            var savedRole = localStorage.getItem('userRole');
-            if(savedUserId && savedRole && window.systemDB && window.systemDB.agents) {
-                if(savedRole === 'admin') { refreshAdminData(); showPage('adminPage'); } 
-                else if(savedRole === 'agent') {
-                    var foundAgent = systemDB.agents.find(function(a) { return a.id.toLowerCase() === savedUserId; });
-                    if(foundAgent) {
-                        currentLoggedInAgent = foundAgent; 
-                        temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
-                        setupAgentDashboard(); showPage('agentPage');
-                    }
-                }
-            }
-        }, 1500); 
     });
 </script>
 
