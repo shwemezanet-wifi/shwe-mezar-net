@@ -135,7 +135,10 @@
 </head>
 <body>
 
-
+<div id="dbLoadingOverlay">
+    <div class="spinner"></div>
+    <div>စနစ်ကို ချိတ်ဆက်နေပါသည်...</div>
+</div>
 
 <div class="app-container">
 
@@ -402,6 +405,7 @@
 
     var selectedFile = null;
     var currentLoggedInAgent = null;
+    var currentLoggedInAdmin = false; 
     var temporaryAgentInventory = []; 
     var editingAgentIndex = null; 
     var isInitialLoadFinished = false;
@@ -426,7 +430,6 @@
             });
         }
 
-        // ဒေတာရသည်နှင့် Loading အဝိုင်းကို ပိတ်မည်
         hideLoadingOverlay();
 
         if(currentLoggedInAgent) {
@@ -446,7 +449,6 @@
     }, function(error) {
         console.error("Firebase Sync Error: ", error);
         hideLoadingOverlay();
-        // ဒေတာဘေ့စ် Error ဖြစ်ခဲ့ရင်တောင် အဝိုင်းပိတ်ပြီး Login Page ကို တန်းပြခိုင်းလိုက်သည်
         showPage('loginPage');
     });
 
@@ -456,32 +458,46 @@
     }
 
     window.saveStateToFirebase = function() {
-        db.ref("wifi_system").set(window.systemDB);
+        // Multi-user safe စနစ်ဖြစ်အောင် တစ်ခုလုံးပုံအောမသိမ်းဘဲ .update ဖြင့်သာ သိမ်းဆည်းမည်
+        var updates = {};
+        updates["wifi_system/adminId"] = window.systemDB.adminId;
+        updates["wifi_system/adminPassword"] = window.systemDB.adminPassword;
+        updates["wifi_system/totalProfit"] = window.systemDB.totalProfit;
+        updates["wifi_system/enableRefund"] = window.systemDB.enableRefund;
+        updates["wifi_system/packages"] = window.systemDB.packages;
+        updates["wifi_system/wifiCodes"] = window.systemDB.wifiCodes;
+        updates["wifi_system/agents"] = window.systemDB.agents;
+        updates["wifi_system/purchaseLogs"] = window.systemDB.purchaseLogs;
+        updates["wifi_system/errorReports"] = window.systemDB.errorReports;
+        
+        db.ref().update(updates).catch(function(error) {
+            console.error("Firebase Update Error: ", error);
+        });
     }
 
     window.showPage = function(pageId) {
         document.getElementById('loginPage').style.display = 'none';
         document.getElementById('adminPage').style.display = 'none';
         document.getElementById('agentPage').style.display = 'none';
-        document.getElementById(pageId).style.display = 'block';
+        var targetNode = document.getElementById(pageId);
+        if(targetNode) targetNode.style.display = 'block';
         window.scrollTo(0, 0); 
     }
 
-    /    // ====== LOGIN & LOGOUT ======
+    // ====== LOGIN & LOGOUT ======
     window.handleLogin = function() {
         var errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = 'none';
         errorArea.innerText = '';
 
-        // 🌟 စနစ်စိတ်ချရအောင် ထည့်သွင်းထားသော ကုဒ်သစ် (Database မတက်သေးရင် Error ပြခိုင်းမည်)
         if (!window.systemDB) {
             errorArea.style.display = 'block';
-            errorArea.innerText = '❌ စနစ်က ဒေတာဘေ့စ်နှင့် မချိတ်ဆက်နိုင်သေးပါ။ (VPN ဖွင့်ရန် လိုအပ်နိုင်ပါသည် သို့မဟုတ် Firebase Rules ကို စစ်ဆေးပါ)';
+            errorArea.innerText = '❌ စနစ်က ဒေတာဘေ့စ်နှင့် မချိတ်ဆက်နိုင်သေးပါ။ (VPN ဖွင့်ရန် လိုအပ်နိုင်ပါသည်)';
             return;
         }
 
         var idInput = document.getElementById('loginId').value.trim();
-        var pwInput = document.getElementById('loginPw').value.trim();
+        var pwInput = document.getElementById('loginPassword').value.trim(); // Fixed: loginPassword ID
 
         if(!idInput || !pwInput) {
             errorArea.style.display = 'block';
@@ -492,24 +508,29 @@
         // Admin Login
         if(idInput === window.systemDB.adminId && pwInput === window.systemDB.adminPassword) {
             currentLoggedInAdmin = true;
-            localStorage.setItem('wifi_admin_login', 'true');
-            showPage('adminDashboard');
-            initAdminDashboard();
+            localStorage.setItem('loggedInUserId', idInput);
+            localStorage.setItem('userRole', 'admin');
+            showPage('adminPage'); // Fixed: Show adminPage instead of adminDashboard
+            refreshAdminData();
             return;
         }
 
-        // Agent Login
-        var agents = window.systemDB.agents || {};
-        if(agents[idInput] && agents[idInput].password === pwInput) {
-            if(agents[idInput].status === 'banned') {
+        // Agent Login (Fixed: Array finding syntax and password check matching .pass)
+        var agents = window.systemDB.agents || [];
+        var foundAgent = agents.find(function(a) { return a.id.toLowerCase() === idInput.toLowerCase(); });
+        
+        if(foundAgent && foundAgent.pass === pwInput) {
+            if(foundAgent.status === 'banned') {
                 errorArea.style.display = 'block';
                 errorArea.innerText = '❌ ဤအေးဂျင့်အကောင့်အား ပိတ်ပင်ထားပါသည်။';
                 return;
             }
-            currentLoggedInAgent = idInput;
-            localStorage.setItem('wifi_agent_login', idInput);
-            showPage('agentDashboard');
-            initAgentDashboard();
+            currentLoggedInAgent = foundAgent;
+            localStorage.setItem('loggedInUserId', idInput.toLowerCase());
+            localStorage.setItem('userRole', 'agent');
+            temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
+            showPage('agentPage'); // Fixed: Show agentPage instead of agentDashboard
+            setupAgentDashboard();
             return;
         }
 
@@ -517,10 +538,9 @@
         errorArea.innerText = '❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!';
     };
 
-
     window.handleLogout = function() {
         localStorage.removeItem('loggedInUserId'); localStorage.removeItem('userRole');
-        currentLoggedInAgent = null; temporaryAgentInventory = []; showPage('loginPage');
+        currentLoggedInAgent = null; currentLoggedInAdmin = false; temporaryAgentInventory = []; showPage('loginPage');
     }
 
     function executeAutoLoginCheck() {
@@ -662,7 +682,7 @@
                             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                                 <span><b>Agent: ${report.agentId}</b></span>
                                 <code style="background:#fee2e2; color:var(--danger); padding:2px 6px; border-radius:6px; font-weight:bold;">${report.errorCode}</code>
-                        </div>
+                            </div>
                             <p style="font-size:12px; color:var(--dark); margin-bottom:6px;">အကြောင်းရင်း: ${report.reason} (${report.package === "1_hour" ? "1H":"1D"})</p>
                             <div style="text-align:right;">${actionBtn}</div>
                         </div>
@@ -1093,6 +1113,8 @@
             
             db.ref().update(updates).then(function() {
                 alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။");
+                // Local UI ပြန်လည်မွမ်းမံရန် 
+                setupAgentDashboard();
             });
         });
     }
@@ -1149,7 +1171,9 @@
         updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = nextToPayAdmin;
         updates["wifi_system/agents/" + agentIndex + "/myInventory"] = temporaryAgentInventory;
         
-        db.ref().update(updates);
+        db.ref().update(updates).then(function() {
+            setupAgentDashboard();
+        });
     }
 
     window.copyAllCodesToClipboard = function() {
@@ -1174,8 +1198,9 @@
         
         var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
         if(agentIndex !== -1) {
-            db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("pending");
-            alert("✅ Ngwe ရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။");
+            db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("pending").then(function() {
+                alert("✅ Ngwe ရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။");
+            });
         }
     }
 
@@ -1195,16 +1220,13 @@
         });
     }
 
-    // [ပြင်ဆင်ချက်အသစ်] ၃ စက္ကန့်အတွင်း Firebase က အကြောင်းမပြန်ရင် (Rules ပိတ်ထားရင်တောင်) အတင်းကျော်ခိုင်းမည့် စနစ်
     window.addEventListener('DOMContentLoaded', function() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
         setTimeout(function() {
             var overlay = document.getElementById('dbLoadingOverlay');
             if (overlay && overlay.style.display !== 'none') {
-                overlay.style.display = 'none'; // အဝိုင်းလည်တာကို ပိတ်သည်
-                
-                // [အရေးကြီးပြင်ဆင်ချက်] Auto Login ကို သွားမစစ်တော့ဘဲ Login Page ကြီးကို အတင်းအကျပ် ဆွဲတင်ပေးလိုက်သည်
+                overlay.style.display = 'none'; 
                 showPage('loginPage'); 
             }
         }, 3000); 
