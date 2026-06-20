@@ -410,6 +410,16 @@
     var editingAgentIndex = null; 
     var isInitialLoadFinished = false;
 
+    // Device ID Generator (စက်အသစ်များကို အလိုအလျောက်ခွဲခြားရန်)
+    function getOrCreateDeviceId() {
+        var devId = localStorage.getItem('sys_device_uuid');
+        if(!devId) {
+            devId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+            localStorage.setItem('sys_device_uuid', devId);
+        }
+        return devId;
+    }
+
     // Realtime Sync from Firebase
     db.ref("wifi_system").on("value", function(snapshot) {
         var cloudData = snapshot.val();
@@ -458,7 +468,6 @@
     }
 
     window.saveStateToFirebase = function() {
-        // Multi-user safe စနစ်ဖြစ်အောင် တစ်ခုလုံးပုံအောမသိမ်းဘဲ .update ဖြင့်သာ သိမ်းဆည်းမည်
         var updates = {};
         updates["wifi_system/adminId"] = window.systemDB.adminId;
         updates["wifi_system/adminPassword"] = window.systemDB.adminPassword;
@@ -484,7 +493,7 @@
         window.scrollTo(0, 0); 
     }
 
-    // ====== LOGIN & LOGOUT ======
+    // ====== LOGIN & LOGOUT (Optimized Device Binding Fix) ======
     window.handleLogin = function() {
         var errorArea = document.getElementById('loginErrorArea');
         errorArea.style.display = 'none';
@@ -492,12 +501,12 @@
 
         if (!window.systemDB) {
             errorArea.style.display = 'block';
-            errorArea.innerText = '❌ စနစ်က ဒေတာဘေ့စ်နှင့် မချိတ်ဆက်နိုင်သေးပါ။ (VPN ဖွင့်ရန် လိုအပ်နိုင်ပါသည်)';
+            errorArea.innerText = '❌ စနစ်က ဒေတာဘေ့စ်နှင့် မချိတ်ဆက်နိုင်သေးပါ။';
             return;
         }
 
         var idInput = document.getElementById('loginId').value.trim();
-        var pwInput = document.getElementById('loginPassword').value.trim(); // Fixed: loginPassword ID
+        var pwInput = document.getElementById('loginPassword').value.trim();
 
         if(!idInput || !pwInput) {
             errorArea.style.display = 'block';
@@ -510,12 +519,12 @@
             currentLoggedInAdmin = true;
             localStorage.setItem('loggedInUserId', idInput);
             localStorage.setItem('userRole', 'admin');
-            showPage('adminPage'); // Fixed: Show adminPage instead of adminDashboard
+            showPage('adminPage');
             refreshAdminData();
             return;
         }
 
-        // Agent Login (Fixed: Array finding syntax and password check matching .pass)
+        // Agent Login
         var agents = window.systemDB.agents || [];
         var foundAgent = agents.find(function(a) { return a.id.toLowerCase() === idInput.toLowerCase(); });
         
@@ -525,11 +534,27 @@
                 errorArea.innerText = '❌ ဤအေးဂျင့်အကောင့်အား ပိတ်ပင်ထားပါသည်။';
                 return;
             }
+
+            // --- Device Lock Bypass & Register logic for New Devices ---
+            var thisDevice = getOrCreateDeviceId();
+            var savedDeviceOnCloud = window.systemDB.currentDevices ? window.systemDB.currentDevices[idInput.toLowerCase()] : null;
+            
+            if(savedDeviceOnCloud && savedDeviceOnCloud !== thisDevice) {
+                errorArea.style.display = 'block';
+                errorArea.innerText = '❌ ဤအကောင့်သည် အခြားဖုန်းတစ်ခုတွင် ချိတ်ဆက်ပြီးသားဖြစ်နေ၍ ဖုန်းအသစ်ဖြင့် ဝင်မရပါ။ Admin ထံ Device Lock ဖြုတ်ခိုင်းပါရန်။';
+                return;
+            }
+
+            // အကယ်၍ cloud မှာ ဘာစက်မှ မမှတ်ရသေးရင် အလိုအလျောက် လက်ရှိစက်အသစ်ကို မှတ်သားပေးမည်
+            if(!savedDeviceOnCloud) {
+                db.ref("wifi_system/currentDevices/" + idInput.toLowerCase()).set(thisDevice);
+            }
+
             currentLoggedInAgent = foundAgent;
             localStorage.setItem('loggedInUserId', idInput.toLowerCase());
             localStorage.setItem('userRole', 'agent');
             temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
-            showPage('agentPage'); // Fixed: Show agentPage instead of agentDashboard
+            showPage('agentPage');
             setupAgentDashboard();
             return;
         }
@@ -551,7 +576,12 @@
                 refreshAdminData(); showPage('adminPage'); 
             } else if(savedRole === 'agent') {
                 var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === savedUserId; });
-                if(foundAgent) {
+                
+                // Auto login မှာပါ Device ကို တိုက်စစ်ပေးခြင်း
+                var thisDevice = getOrCreateDeviceId();
+                var savedDeviceOnCloud = window.systemDB.currentDevices ? window.systemDB.currentDevices[savedUserId.toLowerCase()] : null;
+                
+                if(foundAgent && (!savedDeviceOnCloud || savedDeviceOnCloud === thisDevice)) {
                     currentLoggedInAgent = foundAgent; 
                     temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
                     setupAgentDashboard(); showPage('agentPage');
@@ -844,7 +874,7 @@
         db.ref("wifi_system/agents/" + editingAgentIndex).update({
             name: name, pass: pass, comm: comm
         }).then(function() {
-            alert(`✅ အချက်အလက်များ ပြင်ဆင်သိမ်းဆည်းပြီးပါပြီ။`); cancelEditAgentMode();
+            alert(`✅ အချက်အလက်များ ပြင်ဆင်သိည်းဆည်းပြီးပါပြီ။`); cancelEditAgentMode();
         });
     }
 
@@ -892,7 +922,7 @@
         updates["wifi_system/errorReports"] = window.systemDB.errorReports;
         
         db.ref().update(updates).then(function() {
-            alert(`🎉 Ngwe ပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။\n- Agent Profit Deduct: နှုတ်ပယ်ပြီး\n- Owner Net Deduct: နှုတ်ပယ်ပြီး`);
+            alert(`🎉 Ngwe ပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။`);
         });
     }
 
@@ -970,7 +1000,7 @@
         });
         
         db.ref("wifi_system/wifiCodes/" + pkg).set(window.systemDB.wifiCodes[pkg]).then(function() {
-            alert(`သိမ်းဆည်းပြီး။ ကုဒ်အသစ် (${addedCount}) ခု ထည့်သွင်းပြီး၊ ထပ်နေသောကုဒ် (${duplicateCount}) ခုကို ပယ်ဖျက်ပြီး။`);
+            alert(`သိမ်းဆည်းပြီး။`);
             document.getElementById('editArea').style.display = "none";
             document.getElementById('imageInput').value = "";
             document.getElementById('pdfFileInput').value = "";
@@ -1004,8 +1034,11 @@
             var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
             if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
             
+            var agentId = window.systemDB.agents[index].id.toLowerCase();
             window.systemDB.agents.splice(index, 1);
-            db.ref("wifi_system/agents").set(window.systemDB.agents).then(function() {
+            
+            db.ref("wifi_system/agents").set(window.systemDB.agents);
+            db.ref("wifi_system/currentDevices/" + agentId).remove().then(function() {
                 if(editingAgentIndex === index) cancelEditAgentMode();
             });
         }
@@ -1017,7 +1050,7 @@
         if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
         
         db.ref("wifi_system/currentDevices/" + agentId.toLowerCase()).remove().then(function() {
-            alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။`);
+            alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။ ဖုန်းအသစ်ဖြင့် အေးဂျင့် ဝင်နိုင်ပါပြီ။`);
         });
     }
 
@@ -1079,7 +1112,7 @@
         db.ref("wifi_system/wifiCodes/" + pkg).get().then(function(snapshot) {
             var freshCodesList = snapshot.val() || [];
             if(freshCodesList.length < count) {
-                return alert(`❌ ကုဒ်မလုံလောက်တော့ပါ။ အခြားသူယူသွားနိုင်ပါသည်။ လက်ကျန်: ${freshCodesList.length} ခုပဲ ရှိပါသည်။`);
+                return alert(`❌ ကုဒ်မလုံလောက်တော့ပါ။ လက်ကျန်: ${freshCodesList.length} ခုပဲ ရှိပါသည်။`);
             }
             
             var codesExtracted = [];
@@ -1113,7 +1146,6 @@
             
             db.ref().update(updates).then(function() {
                 alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။");
-                // Local UI ပြန်လည်မွမ်းမံရန် 
                 setupAgentDashboard();
             });
         });
@@ -1223,6 +1255,7 @@
     window.addEventListener('DOMContentLoaded', function() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
+        // အရေးပေါ် ၃ စက္ကန့်ကျော်သွားပါက Loading ပိတ်ပြီး Login ဆီ အတင်းပို့ပေးမည့် Fail-Safe စနစ်
         setTimeout(function() {
             var overlay = document.getElementById('dbLoadingOverlay');
             if (overlay && overlay.style.display !== 'none') {
