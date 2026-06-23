@@ -3,327 +3,419 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ရွှေမဲဇာနက် Wi-Fi - HOLOGRAM CORE</title>
+    <title>ရွှေမဲဇာနက် Wi-Fi</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
     <style>
-        /* Sci-Fi 3D Hologram Theme CSS */
         :root {
-            --neon-cyan: #00f2fe;
-            --neon-blue: #4facfe;
-            --neon-purple: #b927fc;
-            --holo-bg: rgba(6, 18, 36, 0.75);
-            --holo-border: rgba(0, 242, 254, 0.25);
-            --holo-glow: 0 0 15px rgba(0, 242, 254, 0.3);
-            --text-glow: 0 0 8px rgba(0, 242, 254, 0.5);
-            --success: #10b981;
+            --primary: #4f46e5; 
+            --primary-light: #e0e7ff; 
+            --success: #10b981; 
+            --success-light: #d1fae5; 
             --danger: #f43f5e;
+            --danger-light: #ffe4e6;
+            --dark: #0f172a; 
             --gray: #94a3b8;
+            --gray-light: #f8fafc;
+            --bg: #0b0f19; /* Star Wars Inspired Deep Space Dark Background */
+            --card-bg: #131a26;
+            --text-color: #f1f5f9;
+            --orange: #f97316;
+            --orange-light: #ffedd5;
+            --radius: 20px;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0; padding: 0;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            -webkit-user-select: none; user-select: none;
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-color); padding-bottom: 90px; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .app-container { max-width: 480px; margin: auto; padding: 16px; position: relative; overflow: hidden; }
+
+        /* Header */
+        .app-header { 
+            background: linear-gradient(135deg, #1e1b4b, #312e81); 
+            color: white; padding: 24px 20px; border-radius: var(--radius); text-align: center; 
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); margin-bottom: 20px;
+            border: 1px solid rgba(79, 70, 229, 0.3);
         }
+        .app-header h2 { font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #ffe81f; text-shadow: 0 0 8px rgba(255, 232, 31, 0.4); }
+        .app-header p { font-size: 12px; opacity: 0.75; margin-top: 4px; color: var(--gray); }
 
-        body {
-            background: radial-gradient(circle at center, #0a192f 0%, #020c1b 100%);
-            color: #c8eafe;
-            overflow-x: hidden;
-            min-height: 100vh;
-            background-attachment: fixed;
+        /* User Status Bar */
+        .user-bar { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: var(--card-bg); padding: 14px 18px; border-radius: 16px; margin-bottom: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
         }
-
-        /* Scanlines and Grid Effect */
-        body::before {
-            content: " "; display: block; position: fixed;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 242, 254, 0.05) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
-            z-index: 9999; background-size: 100% 4px, 6px 100%;
-            pointer-events: none;
+        .user-info { font-size: 13px; font-weight: 700; color: var(--text-color); }
+        .btn-logout { 
+            background: rgba(244, 63, 94, 0.15); color: var(--danger); padding: 8px 14px; 
+            border-radius: 10px; border: 1px solid rgba(244, 63, 94, 0.3); cursor: pointer; font-size: 12px; font-weight: 700; transition: 0.2s;
         }
+        .btn-logout:active { transform: scale(0.95); }
 
-        .loading-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #020c1b; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10000;
+        /* Modern Star Wars Wipe/Slide Transition Container System */
+        .page-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            min-height: 400px;
         }
-
-        .spinner {
-            width: 80px; height: 80px;
-            border: 4px solid transparent;
-            border-top: 4px solid var(--neon-cyan);
-            border-bottom: 4px solid var(--neon-purple);
-            border-radius: 50%; animation: spin 1.5s linear infinite;
-            box-shadow: var(--holo-glow);
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.05); }
-            100% { transform: rotate(360deg) scale(1); }
-        }
-
-        .app-container { max-width: 1200px; margin: 0 auto; padding: 15px; display: none; }
-
-        .holo-card {
-            background: var(--holo-bg); border: 1px solid var(--holo-border);
-            border-radius: 16px; padding: 20px; margin-bottom: 20px;
-            backdrop-filter: blur(12px); box-shadow: var(--holo-glow);
-        }
-
-        h1, h2, h3, h4 { color: #fff; text-shadow: var(--text-glow); margin-bottom: 15px; }
-
-        .holo-input, select, textarea {
-            width: 100%; padding: 12px 15px; background: rgba(0, 20, 40, 0.6);
-            border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 8px;
-            color: #fff; font-size: 16px; margin-bottom: 15px; transition: all 0.3s;
-        }
-
-        .holo-input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: var(--holo-glow); }
-
-        .holo-btn {
-            background: linear-gradient(135deg, var(--neon-blue) 0%, var(--neon-cyan) 100%);
-            border: none; padding: 12px 25px; color: #020c1b; font-weight: bold;
-            border-radius: 8px; cursor: pointer; box-shadow: var(--holo-glow);
-            transition: all 0.3s; text-transform: uppercase;
-        }
-
-        .holo-btn:hover { transform: translateY(-2px); box-shadow: 0 0 20px var(--neon-cyan); }
-        .holo-btn-danger { background: linear-gradient(135deg, #f43f5e 0%, #b927fc 100%); color: white; }
-        .holo-btn-secondary { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--holo-border); color: #fff; }
-
-        .holo-nav { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .nav-item {
-            padding: 10px 20px; background: rgba(0, 242, 254, 0.05); border: 1px solid var(--holo-border);
-            color: #c8eafe; border-radius: 8px; cursor: pointer; white-space: nowrap;
-        }
-        .nav-item.active { background: rgba(0, 242, 254, 0.2); border-color: var(--neon-cyan); box-shadow: var(--holo-glow); }
-
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        @media(max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-
-        /* Window / Modal Popups */
-        .holo-window {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            width: 90%; max-width: 650px; max-height: 85vh; background: rgba(4, 14, 28, 0.98);
-            border: 2px solid var(--neon-cyan); border-radius: 16px; z-index: 2000;
-            display: none; flex-direction: column; box-shadow: 0 0 50px rgba(0, 242, 254, 0.4);
-            backdrop-filter: blur(20px); transition: all 0.2s ease;
-        }
-        .holo-window-header { padding: 15px; border-bottom: 1px solid var(--holo-border); display: flex; justify-content: space-between; align-items: center; background: rgba(0, 242, 254, 0.1); }
-        .holo-window-body { padding: 20px; overflow-y: auto; flex: 1; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1999; display: none; backdrop-filter: blur(5px); }
-
-        .code-item { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 242, 254, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
-        .badge-danger { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid #f43f5e; }
         
-        .select-all-box { display: flex; align-items: center; gap: 10px; background: rgba(0, 242, 254, 0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed var(--holo-border); }
-        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer; }
+        .page { 
+            display: none; 
+            width: 100%;
+        } 
+        
+        /* Star Wars Screen Transition Effects */
+        .page.active { 
+            display: block; 
+        }
+        
+        .starwars-wipe-in {
+            animation: starwarsWipe 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .starwars-slide-in {
+            animation: starwarsSlide 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes starwarsWipe { 
+            from { clip-path: inset(0 100% 0 0); transform: scale(0.97); opacity: 0.5; } 
+            to { clip-path: inset(0 0 0 0); transform: scale(1); opacity: 1; } 
+        }
+        
+        @keyframes starwarsSlide {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Card */
+        .card { 
+            background: var(--card-bg); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); 
+        }
+        .card h4 { font-size: 15px; font-weight: 700; color: var(--text-color); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .data-card-item {
+            background: rgba(255,255,255,0.02); padding: 14px 16px; border-radius: 14px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .data-card-item .title { font-weight: 700; font-size: 13px; color: #cbd5e1; }
+        .data-card-item .value { font-weight: 800; font-size: 14px; color: #818cf8; }
+
+        /* Inputs */
+        label { font-size: 11px; font-weight: 700; color: #94a3b8; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select, textarea { 
+            width: 100%; padding: 14px; margin-bottom: 16px; border: 1.5px solid rgba(255,255,255,0.1); 
+            border-radius: 12px; font-size: 14px; color: var(--text-color); background-color: rgba(0,0,0,0.2); transition: all 0.3s; 
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); background-color: rgba(0,0,0,0.4); outline: none; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3); }
+        textarea { resize: vertical; min-height: 80px; font-family: monospace; }
+
+        /* Buttons */
+        button { 
+            width: 100%; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 14px; border: none; 
+            cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); margin-top: 4px; 
+        }
+        button:active { transform: scale(0.96); opacity: 0.9; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
+        .btn-success { background: var(--success); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .btn-danger { background: var(--danger); color: white; box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3); }
+        .btn-orange { background: var(--orange); color: white; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3); }
+        .btn-sm { width: auto; padding: 6px 12px; font-size: 11px; margin: 2px; border-radius: 8px; box-shadow: none; }
+
+        .fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .fin-box { padding: 18px 14px; border-radius: var(--radius); text-align: center; background: var(--card-bg); box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; border: 1px solid rgba(255,255,255,0.05);}
+        .bg-blue { background: rgba(79, 70, 229, 0.1); color: #a5b4fc; border: 1px solid rgba(79, 70, 229, 0.3); }
+        .bg-green { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .bg-orange-box { background: rgba(249, 115, 22, 0.1); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.3); }
+        .fin-box p { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+        .fin-box h4 { font-size: 16px; font-weight: 800; margin-top: 6px; }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(19, 26, 38, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+            z-index: 999; box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; color: var(--gray); font-size: 10px; font-weight: 700;
+            cursor: pointer; background: none; border: none; padding: 4px 12px; width: auto; margin: 0; box-shadow: none;
+        }
+        .nav-item.active { color: #ffe81f; text-shadow: 0 0 6px rgba(255, 232, 31, 0.3); }
+        .nav-item span { font-size: 18px; margin-bottom: 2px; }
+
+        .scroll-view { max-height: 250px; overflow-y: auto; padding-right: 4px; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        .error-msg { color: var(--danger); background: rgba(244, 63, 94, 0.1); padding: 14px; border-radius: 12px; font-size: 13px; font-weight: 700; text-align: center; margin-bottom: 16px; display: none; border: 1px solid rgba(244, 63, 94, 0.3); }
+        .agent-code-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .code-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+
+        #dbLoadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0f19; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; color: #ffe81f; font-size: 14px; }
+        .spinner { width: 32px; height: 32px; border: 3px solid rgba(255, 232, 31, 0.1); border-top: 3px solid #ffe81f; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; font-size: 16px; color: black; background: white; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="loading-screen" id="loadingScreen">
-        <div class="spinner"></div>
-        <div class="loading-text" id="statusMessage" style="margin-top:20px; letter-spacing:3px; color:var(--neon-cyan);">INITIALIZING CYBER CORE MAIN_SYSTEM...</div>
+<div id="dbLoadingOverlay">
+    <div class="spinner"></div>
+    <div>စနစ်ကို ချိတ်ဆက်နေပါသည်...</div>
+</div>
+
+<div class="app-container">
+
+    <div class="app-header">
+        <h2>ရွှေမဲဇာနက် Wi-Fi</h2>
+        <p>Agent Management System</p>
     </div>
 
-    <div class="app-container" id="appMain" style="display:block;">
-        
-        <div id="loginPage" class="holo-card" style="max-width: 450px; margin: 100px auto; display: block;">
-            <h2 style="text-align: center; color: var(--neon-cyan);">CYBER SECURE ACCESS</h2>
-            <p style="text-align: center; margin-bottom: 20px; font-size: 13px; color: var(--neon-blue);">SHWE MEZA NET SYSTEM v2.0</p>
-            <input type="text" id="loginId" class="holo-input" placeholder="NODE ACCESS ID">
-            <input type="password" id="loginPassword" class="holo-input" placeholder="SECURITY DECRYPTION KEY">
-            <button class="holo-btn" style="width: 100%;" onclick="window.handleLogin()">ESTABLISH CONNECTION</button>
+    <div class="page-wrapper">
+        <div id="loginPage" class="page active">
+            <div class="card" style="padding: 28px 20px;">
+                <h3 style="text-align: center; margin-bottom: 24px; color: var(--text-color); font-size: 18px; font-weight: 800;">🔐 အကောင့်ဝင်ရောက်ရန်</h3>
+                <div id="loginErrorArea" class="error-msg"></div>
+                
+                <label>အကောင့် ID</label>
+                <input type="text" id="loginId" placeholder="admin သို့မဟုတ် အေးဂျင့် ID" autocomplete="off">
+                
+                <label>စကားဝှက် (Password)</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+                
+                <button class="btn-primary" onclick="handleLogin()" style="padding:16px; margin-top:8px;">လော့ဂ်အင်ဝင်မည်</button>
+            </div>
         </div>
 
-        <div id="adminPage" style="display: none;">
-            <div class="holo-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h2 style="color: var(--neon-cyan); margin:0;">ADMIN MAIN MAINFRAME</h2>
-                    <span class="badge badge-success">ROOT DIRECTORY ONLINE</span>
-                </div>
-                <button class="holo-btn holo-btn-danger" onclick="window.handleLogout()">DISCONNECT TERMINAL</button>
+        <div id="adminPage" class="page">
+            <div class="user-bar">
+                <span class="user-info">👤 ပိုင်ရှင် <span style="color:#818cf8">(Admin)</span></span>
+                <button class="btn-logout" onclick="handleLogout()">ထွက်မည်</button>
             </div>
 
-            <div class="holo-nav">
-                <div class="nav-item active" onclick="switchAdminSubPage('dashboard', this)">DASHBOARD SYSTEM</div>
-                <div class="nav-item" onclick="switchAdminSubPage('upload', this)">DATA EXTRACTOR (UPLOAD)</div>
-                <div class="nav-item" onclick="switchAdminSubPage('agents', this)">AGENT NODES</div>
-                <div class="nav-item" onclick="switchAdminSubPage('settings', this)">CORE SECURITY KEY</div>
+            <div class="fin-grid">
+                <div class="fin-box bg-blue">
+                    <p>💰 စုစုပေါင်း ဝင်ငွေ</p>
+                    <h4 id="lblTotalProfit">0 Ks</h4>
+                    <button class="btn-danger btn-sm" onclick="resetTotalProfit()" style="position: absolute; right: 5px; top: 5px; padding: 2px 6px; font-size: 9px; margin:0; width:auto; border-radius:6px;">Reset ညှိရန်</button>
+                </div>
+                <div class="fin-box bg-green">
+                    <p>⚙️ စနစ်အခြေအနေ</p>
+                    <h4>အွန်လိုင်း</h4>
+                </div>
             </div>
 
             <div id="adminSubDashboard">
-                <div class="grid-3">
-                    <div class="holo-card">
-                        <h4>TOTAL ACCUMULATED REVENUE</h4>
-                        <h2 id="totalSales" style="color: var(--neon-cyan); margin-top: 10px;">0 MMK</h2>
-                    </div>
-                    <div class="holo-card">
-                        <h4>MASTER CODE STORES</h4>
-                        <h2 id="availCodes" style="color: var(--neon-blue); margin-top: 10px;">0 U</h2>
-                    </div>
-                    <div class="holo-card">
-                        <h4>ACTIVE SYNCED AGENTS</h4>
-                        <h2 id="activeAgentsCount" style="color: var(--neon-purple); margin-top: 10px;">0 NODES</h2>
-                    </div>
+                <div class="card">
+                    <h4>📦 ကတ်လက်ကျန် အခြေအနေ</h4>
+                    <div id="adminStockTableBody"></div> 
                 </div>
 
-                <div class="holo-card">
-                    <h3>MASTER INVENTORY CODES LOGGER</h3>
-                    <div id="adminMasterInventoryContainer" style="max-height: 400px; overflow-y:auto; margin-top:15px;"></div>
+                <div class="card" style="background: rgba(249, 115, 22, 0.05); border-color: var(--orange);">
+                    <h4 style="color:var(--orange);">💸 အေးဂျင့်များထံမှ Ngwe ရှင်းရန်တောင်းဆိုမှု</h4>
+                    <div id="adminSettlementTable" class="scroll-view"></div>
                 </div>
             </div>
 
-            <div id="adminSubUpload" style="display: none;">
-                <div class="holo-card">
-                    <h3>IMAGE/PDF AUTOMATED OCR INJECTOR</h3>
-                    <input type="file" id="fileInput" class="holo-input" accept="image/*,application/pdf" onchange="window.handleFileSelect(event)">
+            <div id="adminSubUpload" style="display:none;">
+                <div class="card">
+                    <h4>📥 ကတ်ကုဒ်အသစ်များ ထည့်သွင်းရန်</h4>
+                    <label>ကတ်အမျိုးအစား ရွေးပါ</label>
+                    <select id="uploadPackageSelect"></select>
                     
-                    <div id="pdfControls" style="display:none; margin-bottom: 15px; background: rgba(0,242,254,0.05); padding:10px; border-radius:8px;">
-                        <span style="color:var(--neon-cyan); font-weight:bold; margin-right:10px;">PDF MODULATION MODULE:</span>
-                        <button class="holo-btn holo-btn-secondary" style="padding:5px 12px;" onclick="window.changePdfPage(-1)">PREV PAGE</button>
-                        <span id="pdfPageInfo" style="margin:0 15px; font-weight:bold;">Page: 0/0</span>
-                        <button class="holo-btn holo-btn-secondary" style="padding:5px 12px;" onclick="window.changePdfPage(1)">NEXT PAGE</button>
+                    <label>ကုဒ်များကို တစ်ပြိုင်နက် Copy / Paste လုပ်ရန်</label>
+                    <textarea id="bulkPasteInput" placeholder="ကုဒ်များကို တစ်ခုချင်းဖြစ်စေ၊ ခြားပြီးဖြစ်စေ စိုက်ကြိုက် Paste လုပ်ထည့်ပါ (ဥပမာ - CODE1 CODE2 CODE3)"></textarea>
+                    <button class="btn-success" onclick="saveBulkPasteCodes()" style="background:#4f46e5; padding:12px; margin-bottom:16px;">📥 ကုဒ်အားလုံး သိမ်းမည်</button>
+                    
+                    <hr style="margin: 16px 0; border:0; border-top:1.5px dashed rgba(255,255,255,0.1);">
+
+                    <div style="background: rgba(79, 70, 229, 0.05); padding: 14px; border-radius: 14px; border: 1.5px solid rgba(79, 70, 229, 0.3); margin-bottom: 16px;">
+                        <label style="color:#a5b4fc; margin-bottom:6px;">📄 PDF ဖိုင်တင်ပြီး ကုဒ်များဖတ်ရန်</label>
+                        <input type="file" id="pdfFileInput" accept="application/pdf" onchange="processPDFFile()" style="font-size:12px; margin:0;">
+                        <div id="pdfStatus" style="font-size: 11px; font-weight:700; color:#a5b4fc; margin-top:6px;"></div>
                     </div>
 
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <canvas id="ocrCanvas" style="max-width:100%; border:1px solid var(--holo-border); border-radius:8px; display:none; margin:0 auto; box-shadow: var(--holo-glow);"></canvas>
+                    <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 14px; border: 2px dashed var(--primary); text-align:center;">
+                        <label style="color:#a5b4fc; margin-bottom:8px;">📷 ကင်မရာရိုက်ရန် သို့မဟုတ် Screenshot/ပုံဖိုင်တင်ရန်</label>
+                        <input type="file" id="imageInput" accept="image/*" onchange="showOptionsModal()" style="font-size:12px;">
+                        <div id="status" style="font-size: 12px; font-weight:700; color:#a5b4fc; margin-top:8px;"></div>
                     </div>
 
-                    <div class="grid-2">
-                        <div>
-                            <h4>EXTRACTED/MANUAL SOURCE CODES</h4>
-                            <textarea id="manualCodes" class="holo-input" rows="8" placeholder="Extracted data chunks or manual injection codes here..."></textarea>
-                        </div>
-                        <div>
-                            <h4>DECRYPTION ATTRIBUTES CONFIG</h4>
-                            <label>SET UNIT BASE CARD VALUE (MMK):</label>
-                            <input type="number" id="codePrice" class="holo-input" value="1000" placeholder="Card Price">
-                            
-                            <label>OCR COMPILER MATCHING PATTERN:</label>
-                            <select id="codeFormatSelector" class="holo-input">
-                                <option value="numeric16">16-Digit Full Numeric Stream</option>
-                                <option value="mixed9">9-Digit Mixed AlphaNumeric Stream</option>
-                                <option value="rawAll">Raw Extracted Full Stream Lines</option>
-                            </select>
-                            
-                            <button class="holo-btn" style="width: 100%; margin-top: 10px;" onclick="window.processAndUpload()">COMMIT INJECTION TO CORE</button>
-                        </div>
+                    <div id="editArea" style="display:none; margin-top:16px;">
+                        <div id="scannedCodesList" class="scroll-view"></div>
+                        <button class="btn-success" onclick="confirmAndSaveScanned()">✅ ဖတ်ရရှိသော ကုဒ်အားလုံးသိမ်းမည်</button>
                     </div>
                 </div>
             </div>
 
-            <div id="adminSubAgents" style="display: none;">
-                <div class="holo-card">
-                    <h3>GENERATE NEW AGENT DATA PACKET</h3>
-                    <div class="grid-3">
-                        <input type="text" id="newAgentName" class="holo-input" placeholder="Agent Terminal Name">
-                        <input type="text" id="newAgentId" class="holo-input" placeholder="Terminal Access ID">
-                        <input type="password" id="newAgentPw" class="holo-input" placeholder="Security Handshake Key">
-                    </div>
-                    <button class="holo-btn" onclick="window.createNewAgent()">SYNCHRONIZE TERMINAL</button>
-                </div>
-
-                <div class="holo-card">
-                    <h3>ACTIVE SUB-AGENT NETWORK ARCHITECTURE</h3>
-                    <div id="agentsListContainer"></div>
-                </div>
-            </div>
-
-            <div id="adminSubSettings" style="display: none;">
-                <div class="holo-card">
-                    <h3>ADMIN SECURITY PROTOCOLS CONFIG</h3>
-                    <label>ROOT TERMINAL ID:</label>
-                    <input type="text" id="cfgAdminId" class="holo-input">
-                    <label>ROOT SECURITY ACCESS PASSWORD:</label>
-                    <input type="password" id="cfgAdminPw" class="holo-input">
-                    <button class="holo-btn" onclick="window.updateAdminConfig()">UPDATE PRIMARY ATTRIBUTES</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="agentPage" style="display: none;">
-            <div class="holo-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <h2 id="agentGreeting" style="color: var(--neon-blue); margin:0;">SUB-NODE TERMINAL</h2>
-                    <span class="badge badge-success">SECURE DOWNLINK CHANNEL SECURED</span>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="holo-btn holo-btn-secondary" onclick="window.openSoldCodesWindow()">VIEW LOGGED SOLD CODES</button>
-                    <button class="holo-btn holo-btn-danger" onclick="window.handleLogout()">DISCONNECT HARDWARE</button>
-                </div>
-            </div>
-
-            <div class="grid-2">
-                <div>
-                    <div class="holo-card">
-                        <h3>LOCAL ACCOUNT VAULT CREDIT</h3>
-                        <h2 id="agentBalance" style="color: var(--neon-cyan);">0 MMK</h2>
-                    </div>
-
-                    <div class="holo-card">
-                        <h3>FETCH COMPONENT CODES FROM CORE DATASET</h3>
-                        <input type="number" id="buyQty" class="holo-input" placeholder="Enter batch size count required">
-                        <button class="holo-btn" style="width:100%;" onclick="window.buyCodesFromAdmin()">PULL ALLOCATED BATCH</button>
+            <div id="adminSubAgents" style="display:none;">
+                <div class="card">
+                    <h4 id="agentFormTitle">👥 Agent အကောင့်အသစ် ဖွင့်ရန်</h4>
+                    <label>Agent ID</label>
+                    <input type="text" id="newAgentId" placeholder="ဥပမာ - ag03">
+                    <label>အေးဂျင့် အမည်</label>
+                    <input type="text" id="newAgentName" placeholder="မောင်မောင်">
+                    <label>Password</label>
+                    <input type="text" id="newAgentPass" placeholder="1122">
+                    <label>ကော်မရှင် %</label>
+                    <input type="number" id="newAgentComm" placeholder="10">
+                    
+                    <div id="agentActionButtons">
+                        <button class="btn-primary" onclick="createAgentAccount()">+ အကောင့်အသစ် ဆောက်မည်</button>
                     </div>
                 </div>
 
-                <div class="holo-card">
-                    <h3>LOCAL SECURE DATA BLOCK INVENTORY</h3>
-                    <div id="agentInventoryContainer" style="max-height: 420px; overflow-y: auto; margin-top: 15px;"></div>
+                <div class="card">
+                    <h4>📊 လက်ရှိ အေးဂျင့်များစာရင်း</h4>
+                    <div id="adminAgentTable" class="scroll-view"></div>
                 </div>
+            </div>
+
+            <div id="adminSubSettings" style="display:none;">
+                <div class="card">
+                    <h4>🛒 အေးဂျင့်များ ဝယ်ယူမှုမှတ်တမ်း</h4>
+                    <div id="adminLogsTable" class="scroll-view"></div>
+                </div>
+
+                <div class="card" style="border-color: var(--danger);">
+                    <h4>⚠️ တင်ထားသော Error ကုဒ်များ</h4>
+                    <div id="adminReportsTable" class="scroll-view"></div>
+                </div>
+
+                <div class="card" style="border-color: #7c3aed;">
+                    <h4>📦 Package မျိုးစုံ စီမံခန့်ခွဲမှု</h4>
+                    <input type="text" id="txtNewPkgId" placeholder="ID (ဥပမာ - 1_week)">
+                    <input type="text" id="txtNewPkgName" placeholder="အမည် (၁ ပတ်စာ ကတ်)">
+                    <input type="number" id="txtNewPkgPrice" placeholder="ဈေးနှုန်း (5000)">
+                    <button class="btn-primary" onclick="addNewPackage()" style="background:#7c3aed;">+ ပတ်ကေ့ဂျ်အသစ် တိုးမည်</button>
+                    <div id="adminPackageSettingsTable" class="scroll-view" style="margin-top:12px;"></div>
+                </div>
+
+                <div class="card">
+                    <h4>⚙️ အထွေထွေ ဆက်တင်</h4>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <input type="checkbox" id="chkEnableRefund" style="width:20px; height:20px; margin:0;">
+                        <label for="chkEnableRefund" style="margin:0; color:var(--danger)">Error တင်ပါက အလိုအလျောက် Ngwe ပြန်အမ်းမည်</label>
+                    </div>
+                    <label>Admin Password ပြောင်းရန်</label>
+                    <input type="text" id="txtAdminPass" value="admin123">
+                    <button class="btn-primary" onclick="saveAdminSettings()" style="background:#475569;">💾 ဆက်တင်သိမ်းမည်</button>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <button class="nav-item active" onclick="switchAdminSubPage('dashboard', this)"><span>📊</span>Dashboard</button>
+                <button class="nav-item" onclick="switchAdminSubPage('upload', this)"><span>📥</span>ကုဒ်တင်ရန်</button>
+                <button class="nav-item" onclick="switchAdminSubPage('agents', this)"><span>👥</span>အေးဂျင့်များ</button>
+                <button class="nav-item" onclick="switchAdminSubPage('settings', this)"><span>⚙</span>မှတ်တမ်း</button>
             </div>
         </div>
 
+        <div id="agentPage" class="page">
+            <div class="user-bar">
+                <span class="user-info">👤 အေးဂျင့်: <span id="currentAgentLabel" style="color:var(--success);">-</span></span>
+                <button class="btn-logout" onclick="handleLogout()">ထွက်မည်</button>
+            </div>
+
+            <div class="fin-grid">
+                <div class="fin-box bg-green">
+                    <p>💰 မိမိအမြတ်ငွေ</p>
+                    <h4 id="lblAgentProfit">0 Ks</h4>
+                </div>
+                <div class="fin-box bg-orange-box">
+                    <p>💸 Admin သို့ ရှင်းရန်ငွေ</p>
+                    <h4 id="lblAgentToPay">0 Ks</h4>
+                </div>
+            </div>
+
+            <div id="agentSubMain">
+                <div class="card" style="padding:14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:12px; font-weight:bold;">ငွေစာရင်းအခြေအနေ: <b id="lblSettlementStatus">-</b></span>
+                        <button id="btnSubmitSettlement" class="btn-orange btn-sm" onclick="submitSettlementRequest()">Admin ထံ Ngwe ရှင်းမည်</button>
+                    </div>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--success);">
+                    <h4>🛒 Wi-Fi ကုဒ် ထုတ်ယူ / ဝယ်ယူရန်</h4>
+                    <label>ကတ်အမျိုးအစား ရွေးပါ</label>
+                    <select id="buyPackageSelect" onchange="updateBuyPriceLabel()"></select>
+                    <p style="font-size:13px; font-weight:700; margin-bottom:14px;">တစ်စောင်လျှင်ကျသင့်ငွေ: <b id="lblSellPrice" style="color:var(--danger);">0</b> Ks</p>
+
+                    <label>ဝယ်ယူမည့် အရေအတွက်</label>
+                    <input type="number" id="buyCountSelect" value="1" min="1">
+                    <button class="btn-success" onclick="askPasswordConfirm()">🛒 ကုဒ်ဝယ်ယူမည်</button>
+                </div>
+
+                <div id="pwdConfirmBox" class="card" style="display:none; border: 2px solid var(--danger); background:rgba(244, 63, 94, 0.05);">
+                    <h4 style="color:var(--danger);">🔒 ဝယ်ယူမှုကို အတည်ပြုရန် Password ရိုက်ပါ</h4>
+                    <input type="password" id="txtAgentActionPwd" placeholder="သင့်အကောင့် Password">
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-danger" onclick="executeBuyCodesConfirmed()" style="padding:10px; font-size:12px;">✅ အတည်ပြုသည်</button>
+                        <button class="btn-primary" onclick="closePwdBox()" style="background:#64748b; padding:10px; font-size:12px;">ဖျက်သိမ်း</button>
+                    </div>
+                </div>
+
+                <div id="boughtCodesArea" class="card" style="display:none; background:rgba(16, 185, 129, 0.05); border:2px solid var(--success);">
+                    <h4>🔑 ဝယ်ယူရရှိထားသော ကုဒ်များစာရင်း</h4>
+                    <div id="printArea" style="display:none;"></div>
+                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                        <button class="btn-primary btn-sm" onclick="copyAllCodesToClipboard()" style="background:#1d4ed8; flex:1;">📋 Copy စာရင်းကူးမည်</button>
+                        <button class="btn-primary btn-sm" onclick="printCodesSection()" style="background:#047857; flex:1;">🖨️ ပရင့်ထုတ်မည်</button>
+                    </div>
+                    <div id="boughtCodesList" class="scroll-view"></div>
+                </div>
+            </div>
+
+            <div id="agentSubReport" style="display:none;">
+                <div class="card" style="border-top: 4px solid var(--danger);">
+                    <h4>⚠️ သုံးမရသော ကုဒ်အမှား တင်ပြရန်</h4>
+                    <label>အမှားတက်နေသော ကတ်အမျိုးအစား</label>
+                    <select id="reportErrorTypeSelect"></select>
+                    <label>အမှားတက်နေသော Wi-Fi ကုဒ်နံပါတ်</label>
+                    <input type="text" id="reportErrorCodeInput" placeholder="ဥပမာ - AB8899">
+                    <label>ဖြစ်ပွားရသည့် အကြောင်းအရင်း</label>
+                    <input type="text" id="reportErrorReasonInput" placeholder="ကုဒ်ဝင်မရပါ / ကတ်ပျက်နေပါ">
+                    <button class="btn-danger" onclick="submitErrorReport()">⚠️ ပိုင်ရှင်ထံ Report တင်မည်</button>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <button class="nav-item active" onclick="switchAgentSubPage('main', this)"><span>🛒</span>ကုဒ်ဝယ်ယူ</button>
+                <button class="nav-item" onclick="switchAgentSubPage('report', this)"><span>⚠️</span>Error Report</button>
+            </div>
+        </div>
     </div>
 
-    <div class="overlay" id="agentDialogOverlay" onclick="window.closeAgentDialog()"></div>
-    <div class="holo-window" id="agentDialogWindow">
-        <div class="holo-window-header">
-            <h3 id="dialogTitle" style="color: var(--neon-cyan); margin: 0;">AGENT LOGS</h3>
-            <button class="holo-btn holo-btn-danger" style="padding: 5px 10px;" onclick="window.closeAgentDialog()">X</button>
-        </div>
-        <div class="holo-window-body">
-            <div id="dialogNavTabs" style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid var(--holo-border); padding-bottom:10px;">
-                <button id="tabBtnInv" class="holo-btn style-btn" style="padding:6px 12px; font-size:12px;" onclick="window.switchDialogTab('inv')">STOCK DATA</button>
-                <button id="tabBtnSold" class="holo-btn holo-btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="window.switchDialogTab('sold')">HISTORICAL SALES REPORT</button>
-            </div>
-            <div id="dialogContentArea"></div>
+</div>
+
+<div id="optionsModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); padding: 15px;">
+    <div style="background-color: var(--card-bg); border: 1px solid rgba(255,255,255,0.1); margin: 40% auto; padding: 20px; border-radius: 20px; max-width: 360px;">
+        <h3 style="color:#818cf8; text-align:center; font-size:16px;">🎯 ဆင်ဆာအမျိုးအစား ရွေးချယ်ရန်</h3>
+        <p style="font-size:11px; color:var(--gray); text-align:center; margin-top:4px; margin-bottom:16px;">ပုံတွင်ပါရှိသော ကုဒ်ပုံစံအတိုင်း ရွေးချယ်ပေးပါဗျာ။</p>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+            <button class="btn-primary" onclick="startScanningWithSensor('text_only')" style="background:#7c3aed;">🔤 စာလုံးသက်သက် (ABCD)</button>
+            <button class="btn-primary" onclick="startScanningWithSensor('num_only')" style="background:#ea580c;">🔢 ဂဏန်းသက်သက် (1234)</button>
+            <button class="btn-primary" onclick="startScanningWithSensor('mixed')" style="background:#0284c7;">🔣 စာနှင့် ဂဏန်းရောရာ (Ab34)</button>
+            <button class="btn-danger" onclick="closeModal()" style="background:#64748b; margin-top:8px; padding:10px; font-size:12px;">❌ ပိတ်မည်</button>
         </div>
     </div>
+</div>
 
-    <div class="overlay" id="windowOverlay" onclick="window.closeSoldCodesWindow()"></div>
-    <div class="holo-window" id="soldCodesWindow">
-        <div class="holo-window-header">
-            <h3 style="color: var(--neon-cyan); margin: 0;">SOLD ARCHIVES MANAGEMENT</h3>
-            <button class="holo-btn holo-btn-danger" style="padding: 5px 10px;" onclick="window.closeSoldCodesWindow()">X</button>
-        </div>
-        <div class="holo-window-body">
-            <div class="select-all-box">
-                <input type="checkbox" id="selectAllSold" onchange="window.toggleSelectAllSold(this)">
-                <label for="selectAllSold" style="color: var(--neon-blue); cursor: pointer; font-weight: bold; font-size:14px;">ONE SELECT ALL (SELECT ALL HISTORY RECORDS)</label>
-                <button class="holo-btn holo-btn-danger" style="margin-left: auto; padding: 6px 12px; font-size: 11px;" onclick="window.deleteSelectedSoldCodes()">DELETE MATRIX SELECTED</button>
-            </div>
-            <div id="soldCodesListContainer"></div>
-        </div>
-    </div>
-
-    <script>
-        // ================= FIREBASE MAINFRAME RE-INITIALIZATION =================
-        var firebaseConfig = {
-            apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
+<script>
+    // Firebase Configuration
+    var firebaseConfig = {
+      apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
   authDomain: "shwe-meza-net-wifi.firebaseapp.com",
   databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "shwe-meza-net-wifi",
@@ -331,496 +423,936 @@
   messagingSenderId: "441871786600",
   appId: "1:441871786600:web:a901834fab6393fc3391dd",
   measurementId: "G-GCGLTXZD9Z"
-        };
+    };
 
-        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-        var db = firebase.database();
+    // Firebase Initialization
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
 
-        // System Core State Storage Matrices
-        var currentLoggedInAdmin = false;
-        var currentLoggedInAgent = null; 
-        var systemData = {};
-        
-        // OCR Engine Reference Matrices
-        var pdfDoc = null; var pdfCurrentPage = 1; var pdfTotalPages = 0; var selectedFileObj = null;
-        var activeDialogAgentKey = null; var activeDialogTab = "inv";
+    // Global System State
+    window.systemDB = {
+        adminId: "admin", adminPassword: "admin123", totalProfit: 0, enableRefund: true,
+        packages: [
+            { id: "1_hour", name: "၁ နာရီစာ ကတ် (1 Hour)", price:1000 },
+            { id: "1_day", name: "၁ ရက်စာ ကတ် (1 Day)", price: 3000}
+        ],
+        wifiCodes: {}, agents: [], currentDevices: {}, purchaseLogs: [], errorReports: []
+    };
 
-        window.addEventListener('DOMContentLoaded', function() {
-            updateStatusText("ESTABLISHING FIREBASE SECURE DATA DOWNLINK LAYER...");
+    var selectedFile = null;
+    var currentLoggedInAgent = null;
+    var currentLoggedInAdmin = false; 
+    var temporaryAgentInventory = []; 
+    var editingAgentIndex = null; 
+    var isInitialLoadFinished = false;
+
+    // Device ID Generator
+    function getOrCreateDeviceId() {
+        var devId = localStorage.getItem('sys_device_uuid');
+        if(!devId) {
+            devId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+            localStorage.setItem('sys_device_uuid', devId);
+        }
+        return devId;
+    }
+
+    // Realtime Sync from Firebase
+    db.ref("wifi_system").on("value", function(snapshot) {
+        var cloudData = snapshot.val();
+        if(cloudData) {
+            window.systemDB.adminId = cloudData.adminId || "admin";
+            window.systemDB.adminPassword = cloudData.adminPassword || "admin123";
+            window.systemDB.totalProfit = cloudData.totalProfit || 0;
+            window.systemDB.enableRefund = cloudData.enableRefund !== undefined ? cloudData.enableRefund : true;
+            window.systemDB.packages = cloudData.packages || [];
+            window.systemDB.wifiCodes = cloudData.wifiCodes || {};
+            window.systemDB.agents = cloudData.agents || [];
+            window.systemDB.currentDevices = cloudData.currentDevices || {};
+            window.systemDB.purchaseLogs = cloudData.purchaseLogs || [];
+            window.systemDB.errorReports = cloudData.errorReports || [];
             
-            // Core Database Stream Listeners
-            db.ref("wifi_system").on("value", function(snapshot) {
-                systemData = snapshot.val() || {};
-                
-                // Inject Default configurations structure if missing inside root node
-                if(!systemData.admin_config) {
-                    db.ref("wifi_system/admin_config").set({ id: "admin", password: "password" });
-                }
-                
-                renderAdminDashboard();
-                renderAgentSection();
-                if(activeDialogAgentKey) { renderAgentDialogContent(); }
-
-                document.getElementById('loadingScreen').style.display = 'none';
-                executeAutoLoginCheck();
-            }, function(error) {
-                console.error("FIREBASE SYNC FAULT CRITICAL: ", error);
+            window.systemDB.packages.forEach(function(p) { 
+                if(!window.systemDB.wifiCodes[p.id]) window.systemDB.wifiCodes[p.id] = []; 
             });
+        }
+
+        hideLoadingOverlay();
+
+        if(currentLoggedInAgent) {
+            var freshAgentState = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+            if(freshAgentState) {
+                currentLoggedInAgent = freshAgentState;
+                temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
+            }
+            setupAgentDashboard();
+        }
+        refreshAdminData();
+
+        if(!isInitialLoadFinished) {
+            isInitialLoadFinished = true;
+            executeAutoLoginCheck();
+        }
+    }, function(error) {
+        console.error("Firebase Sync Error: ", error);
+        hideLoadingOverlay();
+        showPage('loginPage');
+    });
+
+    function hideLoadingOverlay() {
+        var overlay = document.getElementById('dbLoadingOverlay');
+        if(overlay) overlay.style.display = 'none';
+    }
+
+    window.saveStateToFirebase = function() {
+        var updates = {};
+        updates["wifi_system/adminId"] = window.systemDB.adminId;
+        updates["wifi_system/adminPassword"] = window.systemDB.adminPassword;
+        updates["wifi_system/totalProfit"] = window.systemDB.totalProfit;
+        updates["wifi_system/enableRefund"] = window.systemDB.enableRefund;
+        updates["wifi_system/packages"] = window.systemDB.packages;
+        updates["wifi_system/wifiCodes"] = window.systemDB.wifiCodes;
+        updates["wifi_system/agents"] = window.systemDB.agents;
+        updates["wifi_system/purchaseLogs"] = window.systemDB.purchaseLogs;
+        updates["wifi_system/errorReports"] = window.systemDB.errorReports;
+        
+        db.ref().update(updates).catch(function(error) {
+            console.error("Firebase Update Error: ", error);
+        });
+    }
+
+    // Modern Star Wars Wipe/Slider Transition Controller
+    window.showPage = function(pageId) {
+        var pages = ['loginPage', 'adminPage', 'agentPage'];
+        pages.forEach(function(id) {
+            var pEl = document.getElementById(id);
+            if(pEl) {
+                pEl.classList.remove('starwars-wipe-in');
+                pEl.style.display = 'none';
+            }
+        });
+        
+        var targetNode = document.getElementById(pageId);
+        if(targetNode) {
+            targetNode.style.display = 'block';
+            // Star Wars Screen Wipe Action Trigger
+            targetNode.classList.add('starwars-wipe-in');
+        }
+        window.scrollTo(0, 0); 
+    }
+
+    // ====== LOGIN & LOGOUT ======
+    window.handleLogin = function() {
+        var errorArea = document.getElementById('loginErrorArea');
+        errorArea.style.display = 'none';
+        errorArea.innerText = '';
+
+        if (!window.systemDB) {
+            errorArea.style.display = 'block';
+            errorArea.innerText = '❌ စနစ်က ဒေတာဘေ့စ်နှင့် မချိတ်ဆက်နိုင်သေးပါ။';
+            return;
+        }
+
+        var idInput = document.getElementById('loginId').value.trim();
+        var pwInput = document.getElementById('loginPassword').value.trim();
+
+        if(!idInput || !pwInput) {
+            errorArea.style.display = 'block';
+            errorArea.innerText = '❌ ကျေးဇူးပြု၍ ID နှင့် စကားဝှက်ကို ပြည့်စုံစွာ ဖြည့်စွက်ပါ။';
+            return;
+        }
+
+        // Admin Login
+        if(idInput === window.systemDB.adminId && pwInput === window.systemDB.adminPassword) {
+            currentLoggedInAdmin = true;
+            localStorage.setItem('loggedInUserId', idInput);
+            localStorage.setItem('userRole', 'admin');
+            showPage('adminPage');
+            refreshAdminData();
+            return;
+        }
+
+        // Agent Login
+        var agents = window.systemDB.agents || [];
+        var foundAgent = agents.find(function(a) { return a.id.toLowerCase() === idInput.toLowerCase(); });
+        
+        if(foundAgent && foundAgent.pass === pwInput) {
+            if(foundAgent.status === 'banned') {
+                errorArea.style.display = 'block';
+                errorArea.innerText = '❌ ဤအေးဂျင့်အကောင့်အား ပိတ်ပင်ထားပါသည်။';
+                return;
+            }
+
+            var thisDevice = getOrCreateDeviceId();
+            var savedDeviceOnCloud = window.systemDB.currentDevices ? window.systemDB.currentDevices[idInput.toLowerCase()] : null;
             
-            setTimeout(function() { document.getElementById('loadingScreen').style.display = 'none'; }, 3500);
+            if(savedDeviceOnCloud && savedDeviceOnCloud !== thisDevice) {
+                errorArea.style.display = 'block';
+                errorArea.innerText = '❌ ဤအကောင့်သည် အခြားဖုန်းတစ်ခုတွင် ချိတ်ဆက်ပြီးသားဖြစ်နေ၍ ဖုန်းအသစ်ဖြင့် ဝင်မရပါ။ Admin ထံ Device Lock ဖြုတ်ခိုင်းပါရန်။';
+                return;
+            }
+
+            if(!savedDeviceOnCloud) {
+                db.ref("wifi_system/currentDevices/" + idInput.toLowerCase()).set(thisDevice);
+            }
+
+            currentLoggedInAgent = foundAgent;
+            localStorage.setItem('loggedInUserId', idInput.toLowerCase());
+            localStorage.setItem('userRole', 'agent');
+            temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
+            showPage('agentPage');
+            setupAgentDashboard();
+            return;
+        }
+
+        errorArea.style.display = 'block';
+        errorArea.innerText = '❌ အကောင့် ID သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်!';
+    };
+
+    window.handleLogout = function() {
+        localStorage.removeItem('loggedInUserId'); localStorage.removeItem('userRole');
+        currentLoggedInAgent = null; currentLoggedInAdmin = false; temporaryAgentInventory = []; showPage('loginPage');
+    }
+
+    function executeAutoLoginCheck() {
+        var savedUserId = localStorage.getItem('loggedInUserId');
+        var savedRole = localStorage.getItem('userRole');
+        if(savedUserId && savedRole && window.systemDB && window.systemDB.agents) {
+            if(savedRole === 'admin') { 
+                refreshAdminData(); showPage('adminPage'); 
+            } else if(savedRole === 'agent') {
+                var foundAgent = window.systemDB.agents.find(function(a) { return a.id.toLowerCase() === savedUserId; });
+                
+                var thisDevice = getOrCreateDeviceId();
+                var savedDeviceOnCloud = window.systemDB.currentDevices ? window.systemDB.currentDevices[savedUserId.toLowerCase()] : null;
+                
+                if(foundAgent && (!savedDeviceOnCloud || savedDeviceOnCloud === thisDevice)) {
+                    currentLoggedInAgent = foundAgent; 
+                    temporaryAgentInventory = [].concat(currentLoggedInAgent.myInventory || []);
+                    setupAgentDashboard(); showPage('agentPage');
+                } else {
+                    handleLogout();
+                }
+            }
+        } else {
+            showPage('loginPage');
+        }
+    }
+
+    // ====== ADMIN METHODS ======
+    window.refreshAdminData = function() {
+        if(!window.systemDB) return;
+        
+        var stockContainer = document.getElementById('adminStockTableBody');
+        if (stockContainer) {
+            stockContainer.innerHTML = "";
+            window.systemDB.packages.forEach(function(p) {
+                var count = window.systemDB.wifiCodes[p.id] ? window.systemDB.wifiCodes[p.id].length : 0;
+                stockContainer.innerHTML += `
+                    <div class="data-card-item">
+                        <span class="title">📦 ${p.name}</span>
+                        <span class="value">${count} ခု</span>
+                    </div>
+                `;
+            });
+        }
+
+        updateAllPackageSelectBoxes();
+
+        var pkgContainer = document.getElementById('adminPackageSettingsTable');
+        if(pkgContainer) {
+            pkgContainer.innerHTML = "";
+            window.systemDB.packages.forEach(function(pkg, index) {
+                var actionBtn = (pkg.id !== "1_hour" && pkg.id !== "1_day") ? 
+                    `<button class="btn-danger btn-sm" onclick="deletePackage(${index})">X ဖျက်မည်</button>` : `<span style="color:var(--gray); font-size:11px;">စနစ်ပါကုဒ်</span>`;
+                pkgContainer.innerHTML += `
+                    <div class="data-card-item">
+                        <div><b>${pkg.name}</b><br><span style="font-size:11px; color:var(--gray);">${pkg.price} Ks</span></div>
+                        <div>${actionBtn}</div>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('lblTotalProfit').innerText = window.systemDB.totalProfit + " Ks";
+        document.getElementById('chkEnableRefund').checked = window.systemDB.enableRefund;
+
+        var agentContainer = document.getElementById('adminAgentTable');
+        if(agentContainer) {
+            agentContainer.innerHTML = "";
+            if(window.systemDB.agents && window.systemDB.agents.length > 0) {
+                window.systemDB.agents.forEach(function(agent, index) {
+                    agentContainer.innerHTML += `
+                        <div class="card" style="padding:14px; margin-bottom:10px; background:rgba(255,255,255,0.01);">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                <span><b>${agent.id.toUpperCase()} - ${agent.name}</b></span>
+                                <span style="color:var(--orange); font-weight:800;">ရှင်းရန်: ${agent.toPayAdmin || 0} Ks</span>
+                            </div>
+                            <div style="font-size:11px; color:var(--gray); margin-bottom:8px;">Commission: ${agent.comm}%</div>
+                            <div style="display:flex; gap:4px;">
+                                <button class="btn-primary btn-sm" onclick="startEditAgent(${index})" style="background:#0284c7;">ပြင်မည်</button>
+                                <button class="btn-orange btn-sm" onclick="unlockAgentDevice('${agent.id}')">🔓 Lockဖြုတ်</button>
+                                <button class="btn-danger btn-sm" onclick="deleteAgentAccount(${index})">ဖျက်</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                agentContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px;">အေးဂျင့်မရှိသေးပါ။</p>`;
+            }
+        }
+
+        var settContainer = document.getElementById('adminSettlementTable');
+        if (settContainer) {
+            settContainer.innerHTML = "";
+            var pendingRequests = window.systemDB.agents ? window.systemDB.agents.filter(function(a) { return a.settlementStatus === "pending"; }) : [];
+            if(pendingRequests.length === 0) {
+                settContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">တောင်းဆိုမှုမရှိသေးပါ။</p>`;
+            } else {
+                pendingRequests.forEach(function(agent) {
+                    settContainer.innerHTML += `
+                        <div class="data-card-item" style="background:var(--card-bg);">
+                            <div><b>${agent.id.toUpperCase()}</b><br><span style="color:var(--danger); font-weight:700;">${agent.toPayAdmin} Ks</span></div>
+                            <button class="btn-success btn-sm" onclick="approveSettlement('${agent.id}')">✅ ရရှိမှုအတည်ပြု</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        var logsContainer = document.getElementById('adminLogsTable');
+        if (logsContainer) {
+            logsContainer.innerHTML = "";
+            if(!window.systemDB.purchaseLogs || window.systemDB.purchaseLogs.length === 0) {
+                logsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">မှတ်တမ်းမရှိသေးပါ။</p>`;
+            } else {
+                [].concat(window.systemDB.purchaseLogs).reverse().forEach(function(log, revIdx) {
+                    var actualIndex = window.systemDB.purchaseLogs.length - 1 - revIdx; 
+                    var targetPkg = window.systemDB.packages.find(function(p) { return p.id === log.package; });
+                    var pkgLabel = targetPkg ? targetPkg.name.split(" ")[0] : log.package;
+                    logsContainer.innerHTML += `
+                        <div class="data-card-item" style="align-items: center;">
+                            <div><b style="color:#818cf8;">${log.agentId}</b> (${log.time})</div>
+                            <div style="text-align:right; display:flex; align-items:center; gap:8px;">
+                                <div><b>${pkgLabel} [${log.count}ခု]</b><br><span style="font-size:11px; color:var(--gray);">${log.totalPrice} Ks</span></div>
+                                <button class="btn-danger btn-sm" onclick="deletePurchaseLog(${actualIndex})" style="padding: 4px 8px; font-size:10px;">ဖျက်</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        var reportsContainer = document.getElementById('adminReportsTable');
+        if (reportsContainer) {
+            reportsContainer.innerHTML = "";
+            if(!window.systemDB.errorReports || window.systemDB.errorReports.length === 0) {
+                reportsContainer.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px; padding:10px;">Report မရှိသေးပါ။</p>`;
+            } else {
+                window.systemDB.errorReports.forEach(function(report, index) {
+                    var actionBtn = window.systemDB.enableRefund ? 
+                        `<button class="btn-danger btn-sm" onclick="processRefundAndClose(${index})">နုတ်/အမ်းမည်</button>` : `<button class="btn-success btn-sm" onclick="deleteReport(${index})" style="background:#64748b;">ဖျက်မည်</button>`;
+                    reportsContainer.innerHTML += `
+                        <div class="card" style="padding:12px; margin-bottom:10px; background:rgba(244, 63, 94, 0.05);">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span><b>Agent: ${report.agentId}</b></span>
+                                <code style="background:rgba(244, 63, 94, 0.2); color:var(--danger); padding:2px 6px; border-radius:6px; font-weight:bold;">${report.errorCode}</code>
+                            </div>
+                            <p style="font-size:12px; color:var(--text-color); margin-bottom:6px;">အကြောင်းရင်း: ${report.reason} (${report.package === "1_hour" ? "1H":"1D"})</p>
+                            <div style="text-align:right;">${actionBtn}</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+    }
+
+    window.deletePurchaseLog = function(index) {
+        if(confirm("⚠️ ဤဝယ်ယူမှုမှတ်တမ်းကို ဖျက်ရန် သေချာပါသလား?")) {
+            window.systemDB.purchaseLogs.splice(index, 1);
+            db.ref("wifi_system/purchaseLogs").set(window.systemDB.purchaseLogs);
+        }
+    }
+
+    window.resetTotalProfit = function() {
+        var ask = prompt("⚠️ ဝင်ငွေပမာဏကို ပြန်လည်ပြင်ဆင်ရန် '0' သို့မဟုတ် မိမိလိုချင်သော ပမာဏကို ရိုက်ထည့်ပါ -");
+        if(ask !== null) {
+            var newAmt = parseInt(ask);
+            if(!isNaN(newAmt)) {
+                db.ref("wifi_system/totalProfit").set(newAmt);
+                alert(`✅ ဝင်ငွေစုစုပေါင်းကို ${newAmt} Ks သို့ ပြောင်းလဲသတ်မှတ်ပြီးပါပြီဗျာ။`);
+            } else {
+                alert("❌ ဂဏန်းအမှန်ကိုသာ ရိုက်ထည့်ပေးပါဗျာ။");
+            }
+        }
+    }
+
+    window.saveBulkPasteCodes = function() {
+        var pkg = document.getElementById('uploadPackageSelect').value;
+        var bulkText = document.getElementById('bulkPasteInput').value.trim();
+        if(!bulkText) return alert("⚠️ ကုဒ်များကို အရင် Paste လုပ်ထည့်ပေးပါဦးဗျာ။");
+        
+        var tokens = bulkText.split(/[\s,\n\r\t]+/);
+        var codesFiltered = tokens.map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+        if(codesFiltered.length === 0) return alert("⚠️ မျှော်လင့်ထားသော ကုဒ်စာသားများ ရှာမတွေ့ပါ။");
+
+        if(!window.systemDB.wifiCodes[pkg]) window.systemDB.wifiCodes[pkg] = [];
+        var added = 0; var dup = 0;
+
+        codesFiltered.forEach(function(code) {
+            if(!window.systemDB.wifiCodes[pkg].includes(code)) {
+                window.systemDB.wifiCodes[pkg].push(code); added++;
+            } else { dup++; }
         });
 
-        function updateStatusText(txt) { document.getElementById('statusMessage').innerText = txt; }
+        db.ref("wifi_system/wifiCodes/" + pkg).set(window.systemDB.wifiCodes[pkg]).then(function() {
+            alert(`✅ ကုဒ်အလုံးအရင်း သိမ်းဆည်းပြီးပါပြီ။\n- ကုဒ်အသစ်ပေါင်း: (${added}) ခု ထည့်သွင်းပြီး\n- ထပ်နေ၍ပယ်ဖျက်သည်: (${dup}) ခု`);
+            document.getElementById('bulkPasteInput').value = "";
+        });
+    }
 
-        function executeAutoLoginCheck() {
-            var sessionRole = localStorage.getItem('userRole');
-            var sessionId = localStorage.getItem('loggedInUserId');
+    window.processPDFFile = function() {
+        var fileInput = document.getElementById('pdfFileInput');
+        var pdfStatus = document.getElementById('pdfStatus');
+        if(fileInput.files.length === 0) return;
+        
+        var pdfFile = fileInput.files[0];
+        pdfStatus.innerText = "🔄 PDF ဖိုင်ထဲမှ ကုဒ်များကို ဖတ်ယူနေပါသည်...";
+        
+        var reader = new FileReader();
+        reader.onload = function() {
+            var typedarray = new Uint8Array(this.result);
+            pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+                var maxPages = pdf.numPages;
+                var countPromises = [];
+                for (var j = 1; j <= maxPages; j++) {
+                    countPromises.push(pdf.getPage(j).then(function(page) {
+                        return page.getTextContent().then(function(textContent) {
+                            return textContent.items.map(function(item) { return item.str; }).join(" ");
+                        });
+                    }));
+                }
+                return Promise.all(countPromises);
+            }).then(function(textPages) {
+                var fullPDFText = textPages.join(" ");
+                var matchedCodes = fullPDFText.match(/\b[A-Za-z0-9]{4,10}\b/g) || [];
+                pdfStatus.innerText = `✅ PDF ဖတ်ပြီးပါပြီ။ ကုဒ်နမူနာ (${matchedCodes.length}) ခု တွေ့ရှိသည်။`;
+                displayScannedCodes(matchedCodes);
+            }).catch(function(err) {
+                pdfStatus.innerText = "❌ PDF ဖိုင်ဖတ်ရတာ မအောင်မြင်ပါ။ စာသားပါသော PDF စစ်စစ်ဖြစ်ရပါမည်။";
+            });
+        };
+        reader.readAsArrayBuffer(pdfFile);
+    }
+
+    window.addNewPackage = function() {
+        var id = document.getElementById('txtNewPkgId').value.trim().toLowerCase().replace(/ /g, "_");
+        var name = document.getElementById('txtNewPkgName').value.trim();
+        var price = parseInt(document.getElementById('txtNewPkgPrice').value) || 0;
+        if(!id || !name || price <= 0) return alert("⚠️ အချက်အလက်များ မှန်ကန်စွာ ဖြည့်စွက်ပေးပါဦးဗျာ။");
+        if(window.systemDB.packages.some(function(p) { return p.id === id; })) return alert("⚠️ ဤ Package ID ရှိပြီးသား ဖြစ်နေသည်။");
+        
+        window.systemDB.packages.push({ id: id, name: name, price: price });
+        
+        var updates = {};
+        updates["wifi_system/packages"] = window.systemDB.packages;
+        updates["wifi_system/wifiCodes/" + id] = [];
+        
+        db.ref().update(updates).then(function() {
+            document.getElementById('txtNewPkgId').value = ""; 
+            document.getElementById('txtNewPkgName').value = ""; 
+            document.getElementById('txtNewPkgPrice').value = "";
+            alert(`✅ Package '${name}' ထည့်သွင်းပြီးပါပြီ။`);
+        });
+    }
+
+    window.deletePackage = function(index) {
+        var pkg = window.systemDB.packages[index];
+        var adminPwd = prompt(`⚠️ '${pkg.name}' ကို ဖျက်ရန် အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -`);
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းသဖြင့် ဖျက်ခွင့်မရှိပါ။");
+        
+        window.systemDB.packages.splice(index, 1); 
+        
+        db.ref("wifi_system/packages").set(window.systemDB.packages);
+        db.ref("wifi_system/wifiCodes/" + pkg.id).remove();
+    }
+
+    function updateAllPackageSelectBoxes() {
+        var selectors = ['uploadPackageSelect', 'buyPackageSelect', 'reportErrorTypeSelect'];
+        selectors.forEach(function(selectId) {
+            var el = document.getElementById(selectId); if(!el) return;
+            var currentVal = el.value; el.innerHTML = "";
+            window.systemDB.packages.forEach(function(pkg) {
+                var opt = document.createElement('option'); opt.value = pkg.id; opt.innerText = pkg.name; el.appendChild(opt);
+            });
+            if([...el.options].some(function(o) { return o.value === currentVal; })) { el.value = currentVal; }
+        });
+    }
+
+    window.startEditAgent = function(index) {
+        editingAgentIndex = index; var agent = window.systemDB.agents[index];
+        document.getElementById('agentFormTitle').innerText = `📝 Agent (${agent.id.toUpperCase()}) ပြင်ဆင်ရန်`;
+        document.getElementById('newAgentId').value = agent.id; document.getElementById('newAgentId').disabled = true; 
+        document.getElementById('newAgentName').value = agent.name; document.getElementById('newAgentPass').value = agent.pass; document.getElementById('newAgentComm').value = agent.comm;
+        document.getElementById('agentActionButtons').innerHTML = `
+            <div style="display:flex; gap:8px;">
+                <button class="btn-success" onclick="saveEditedAgentAccount()" style="flex:1;">💾 Update သိမ်းမည်</button>
+                <button class="btn-primary" onclick="cancelEditAgentMode()" style="background:#64748b; flex:1;">ဖျက်သိမ်း</button>
+            </div>
+        `;
+    }
+
+    window.cancelEditAgentMode = function() {
+        editingAgentIndex = null; document.getElementById('agentFormTitle').innerText = "👥 Agent အကောင့်အသစ် ဖွင့်ရန်";
+        document.getElementById('newAgentId').value = ""; document.getElementById('newAgentId').disabled = false;
+        document.getElementById('newAgentName').value = ""; document.getElementById('newAgentPass').value = ""; document.getElementById('newAgentComm').value = "";
+        document.getElementById('agentActionButtons').innerHTML = `<button class="btn-primary" onclick="createAgentAccount()">+ အကောင့်အသစ် ဆောက်မည်</button>`;
+    }
+
+    window.saveEditedAgentAccount = function() {
+        var name = document.getElementById('newAgentName').value.trim();
+        var pass = document.getElementById('newAgentPass').value.trim();
+        var comm = parseInt(document.getElementById('newAgentComm').value);
+        var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Admin Password မှားယွင်းနေပါသည်!");
+        
+        db.ref("wifi_system/agents/" + editingAgentIndex).update({
+            name: name, pass: pass, comm: comm
+        }).then(function() {
+            alert(`✅ အချက်အလက်များ ပြင်ဆင်သိည်းဆည်းပြီးပါပြီ။`); cancelEditAgentMode();
+        });
+    }
+
+    window.approveSettlement = function(agentId) {
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === agentId.toLowerCase(); });
+        if(agentIndex !== -1) {
+            var adminPwd = prompt("🔑 ဤလုပ်ဆောင်ချက်ကို အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
+            if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်။");
+            var agent = window.systemDB.agents[agentIndex];
             
-            if(sessionRole === 'admin') {
-                currentLoggedInAdmin = true;
-                showPage('adminPage');
-            } else if(sessionRole === 'agent' && sessionId) {
-                currentLoggedInAgent = sessionId;
-                showPage('agentPage');
-            } else {
-                showPage('loginPage');
-            }
-        }
-
-        function showPage(pageId) {
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('adminPage').style.display = 'none';
-            document.getElementById('agentPage').style.display = 'none';
-            document.getElementById(pageId).style.display = 'block';
-        }
-
-        // --- AUTHENTICATION FLOW MANAGERS ---
-        window.handleLogin = function() {
-            var idInput = document.getElementById('loginId').value.trim();
-            var pwInput = document.getElementById('loginPassword').value.trim();
-
-            if(!idInput || !pwInput) { alert("AUTHENTICATION DENIED: VOID CREDENTIAL PACKETS!"); return; }
-
-            if(systemData.admin_config && systemData.admin_config.id === idInput && systemData.admin_config.password === pwInput) {
-                localStorage.setItem('userRole', 'admin');
-                currentLoggedInAdmin = true; showPage('adminPage'); return;
-            }
-
-            if(systemData.agents) {
-                for(var key in systemData.agents) {
-                    if(systemData.agents[key].id === idInput && systemData.agents[key].password === pwInput) {
-                        localStorage.setItem('userRole', 'agent');
-                        localStorage.setItem('loggedInUserId', key);
-                        currentLoggedInAgent = key; showPage('agentPage'); return;
-                    }
-                }
-            }
-            alert("SECURITY ALERT: VIOLATION IDENTIFIED, ENCRYPTION CREDENTIALS UNMATCHED!");
-        };
-
-        window.handleLogout = function() {
-            localStorage.clear(); currentLoggedInAdmin = false; currentLoggedInAgent = null; showPage('loginPage');
-        };
-
-        // ================= ADMIN CONSOLE LOGICAL SUB-SYSTEMS =================
-        function renderAdminDashboard() {
-            if(!systemData) return;
+            var targetProfitNode = window.systemDB.totalProfit + agent.toPayAdmin;
             
-            // Total overall metrics calc
-            var masterCount = systemData.master_inventory ? Object.keys(systemData.master_inventory).length : 0;
-            document.getElementById('availCodes').innerText = masterCount + " UNITS";
-            document.getElementById('totalSales').innerText = (systemData.total_revenue || 0).toLocaleString() + " MMK";
-            document.getElementById('activeAgentsCount').innerText = systemData.agents ? Object.keys(systemData.agents).length + " NODES" : "0 NODES";
-
-            // Global Config injection setup
-            if(systemData.admin_config) {
-                document.getElementById('cfgAdminId').value = systemData.admin_config.id || "admin";
-                document.getElementById('cfgAdminPw').value = systemData.admin_config.password || "password";
-            }
-
-            // Render Master Admin Active Inventory Store codes
-            var masterHtml = "";
-            if(systemData.master_inventory) {
-                for(var mk in systemData.master_inventory) {
-                    var mi = systemData.master_inventory[mk];
-                    masterHtml += `<div class="code-item">
-                        <span style="font-family:monospace; font-size:16px; letter-spacing:1px; color:#fff;">${mi.code}</span>
-                        <div>
-                            <span class="badge badge-success" style="margin-right:10px;">${mi.price} MMK</span>
-                            <button class="holo-btn holo-btn-danger" style="padding:4px 10px; font-size:11px;" onclick="window.deleteMasterCode('${mk}')">ERASE</button>
-                        </div>
-                    </div>`;
-                }
-            }
-            document.getElementById('adminMasterInventoryContainer').innerHTML = masterHtml || "<p style='color:var(--gray); text-align:center;'>Master cloud database inventory empty.</p>";
-
-            // Render Node agent blocks
-            var agentHtml = "";
-            if(systemData.agents) {
-                for(var ak in systemData.agents) {
-                    var curAg = systemData.agents[ak];
-                    var stockSize = curAg.my_inventory ? Object.keys(curAg.my_inventory).length : 0;
-                    var soldSize = curAg.sold_codes ? Object.keys(curAg.sold_codes).length : 0;
-                    
-                    agentHtml += `<div class="holo-card" style="border-color:rgba(185,39,252,0.2); margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                        <div>
-                            <h4 style="color:var(--neon-cyan); margin:0;">NODE: ${curAg.name}</h4>
-                            <small style="color:var(--gray)">Access ID: ${curAg.id} | Funds Wallet: <span style="color:#fff; font-weight:bold;">${(curAg.balance || 0).toLocaleString()} MMK</span></small>
-                            <div style="margin-top:5px; font-size:12px;">Active Logs: Stock[${stockSize} U] | Sold[${soldSize} U]</div>
-                        </div>
-                        <div style="display:flex; gap:8px;">
-                            <button class="holo-btn" style="padding:6px 12px; font-size:12px;" onclick="window.openAgentDialog('${ak}', '${curAg.name}')">INTERROGATE LOGS (VIEW)</button>
-                            <button class="holo-btn holo-btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="window.promptEditAgent('${ak}')">EDIT</button>
-                            <button class="holo-btn holo-btn-danger" style="padding:6px 12px; font-size:12px;" onclick="window.terminateAgent('${ak}')">TERMINATE</button>
-                        </div>
-                    </div>`;
-                }
-            }
-            document.getElementById('agentsListContainer').innerHTML = agentHtml || "<p style='color:var(--gray)'>No active slave sub-nodes running on matrix telemetry.</p>";
-        }
-
-        window.deleteMasterCode = function(k) { if(confirm("Confirm deletion of code from master cloud stack?")) db.ref("wifi_system/master_inventory/" + k).remove(); };
-
-        window.createNewAgent = function() {
-            var name = document.getElementById('newAgentName').value.trim();
-            var id = document.getElementById('newAgentId').value.trim();
-            var pw = document.getElementById('newAgentPw').value.trim();
-
-            if(!name || !id || !pw) return alert("VALIDATION FAULT: INCOMPLETE PACKET DATA FIELD VALUES!");
-
-            db.ref("wifi_system/agents").push({
-                name: name, id: id, password: pw, balance: 0, my_inventory: {}, sold_codes: {}
-            }).then(() => {
-                alert("SUB-NODE SYNCHRONIZATION TRANSACTION REGISTERED!");
-                document.getElementById('newAgentName').value = ""; document.getElementById('newAgentId').value = ""; document.getElementById('newAgentPw').value = "";
-            });
-        };
-
-        window.promptEditAgent = function(key) {
-            var ag = systemData.agents[key]; if(!ag) return;
-            var newName = prompt("Modify Terminal Node Identity Label:", ag.name);
-            var newId = prompt("Modify Security Protocol Link Identity Access ID:", ag.id);
-            var newPw = prompt("Modify Decryption Cryptographic Password:", ag.password);
-            var newBal = prompt("Adjust Local Account Balance Matrix Credits (MMK):", ag.balance || 0);
-
-            if(newName && newId && newPw && newBal !== null) {
-                db.ref("wifi_system/agents/" + key).update({
-                    name: newName, id: newId, password: newPw, balance: parseInt(newBal)
-                }).then(() => alert("AGENT TRANS COMPLIANT MODIFICATION COMMITTED!"));
-            }
-        };
-
-        window.terminateAgent = function(key) { if(confirm("CONFIRM FULL DESTRUCTION/TERMINATION TRANSACTION RECORD FOR SELECTED AGENT SUB-NODE?")) db.ref("wifi_system/agents/" + key).remove(); };
-
-        window.updateAdminConfig = function() {
-            var nid = document.getElementById('cfgAdminId').value.trim();
-            var npw = document.getElementById('cfgAdminPw').value.trim();
-            if(!nid || !npw) return alert("CRITICAL FAULT: SYSTEM ID AND KEY PARAMETERS MANDATORY!");
-            db.ref("wifi_system/admin_config").set({ id: nid, password: npw }).then(() => alert("ROOT CORE ATTRIBUTES REDEFINED SUCCESSFULLY!"));
-        };
-
-        // --- ADMIN DIALOGUE MODULES (STOCK/SOLD VIEWER FOR SPECIFIC AGENTS) ---
-        window.openAgentDialog = function(key, name) {
-            activeDialogAgentKey = key; activeDialogTab = "inv";
-            document.getElementById('agentDialogOverlay').style.display = "block";
-            var win = document.getElementById('agentDialogWindow'); win.style.display = "flex";
-            document.getElementById('dialogTitle').innerText = "MATRIX PACKET RECORDS LOGGING: " + name.toUpperCase();
-            renderAgentDialogContent();
-        };
-
-        window.closeAgentDialog = function() {
-            activeDialogAgentKey = null; document.getElementById('agentDialogOverlay').style.display = "none";
-            document.getElementById('agentDialogWindow').style.display = "none";
-        };
-
-        window.switchDialogTab = function(tabName) {
-            activeDialogTab = tabName;
-            document.getElementById('tabBtnInv').className = tabName === 'inv' ? "holo-btn style-btn" : "holo-btn holo-btn-secondary";
-            document.getElementById('tabBtnSold').className = tabName === 'sold' ? "holo-btn style-btn" : "holo-btn holo-btn-secondary";
-            renderAgentDialogContent();
-        };
-
-        function renderAgentDialogContent() {
-            if(!activeDialogAgentKey || !systemData.agents || !systemData.agents[activeDialogAgentKey]) return;
-            var ag = systemData.agents[activeDialogAgentKey];
-            var container = document.getElementById('dialogContentArea');
-            var html = "";
-
-            if(activeDialogTab === 'inv') {
-                if(ag.my_inventory) {
-                    for(var k in ag.my_inventory) {
-                        html += `<div class="code-item">
-                            <span style="font-family:monospace; font-size:15px; color:#fff;">${ag.my_inventory[k].code}</span>
-                            <span class="badge badge-success">${ag.my_inventory[k].price} MMK</span>
-                        </div>`;
-                    }
-                }
-                container.innerHTML = html || "<p style='color:var(--gray); text-align:center; padding:15px;'>No active stock inventory held inside this sub-node datacenter block.</p>";
-            } else {
-                if(ag.sold_codes) {
-                    for(var sk in ag.sold_codes) {
-                        var sc = ag.sold_codes[sk];
-                        html += `<div class="code-item">
-                            <div>
-                                <span style="font-family:monospace; font-size:15px; color:#fff;">${sc.code}</span><br>
-                                <small style="color:var(--gray)">Time Matrix: ${sc.sold_at || 'Unknown'}</small>
-                            </div>
-                            <span class="badge badge-danger">+${sc.price} MMK OUT</span>
-                        </div>`;
-                    }
-                }
-                container.innerHTML = html || "<p style='color:var(--gray); text-align:center; padding:15px;'>No historical logged sales dataset archives found for this terminal node.</p>";
-            }
-        }
-
-        // --- OCR / COMPILER PARSING AUTOMATED ENGINES (မူလ OCR Function အားလုံး အပြည့်ပြန်ပါလာသည်) ---
-        window.handleFileSelect = function(e) {
-            var file = e.target.files[0]; if(!file) return;
-            selectedFileObj = file;
-            document.getElementById('loadingScreen').style.display = 'flex';
-            updateStatusText("LOADING COMPONENT BIT STREAM MATRIX ATTACHMENT...");
-
-            if(file.type === "application/pdf") {
-                var fileReader = new FileReader();
-                fileReader.onload = function() {
-                    var typedarray = new Uint8Array(this.result);
-                    pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
-                        pdfDoc = pdf; pdfTotalPages = pdf.numPages; pdfCurrentPage = 1;
-                        document.getElementById('pdfControls').style.display = "block";
-                        renderPdfPageToCanvas();
-                    });
-                };
-                fileReader.readAsArrayBuffer(file);
-            } else {
-                document.getElementById('pdfControls').style.display = "none";
-                var imgUrl = URL.createObjectURL(file);
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.getElementById('ocrCanvas'); var ctx = canvas.getContext('2d');
-                    canvas.width = img.width; canvas.height = img.height; canvas.style.display = "block";
-                    ctx.drawImage(img, 0, 0); executeOcrRecognition(canvas);
-                };
-                img.src = imgUrl;
-            }
-        };
-
-        window.changePdfPage = function(dir) {
-            var target = pdfCurrentPage + dir;
-            if(target >= 1 && target <= pdfTotalPages) {
-                pdfCurrentPage = target;
-                document.getElementById('loadingScreen').style.display = 'flex';
-                updateStatusText("SHIFTING MATRIX BUFFER CELL TO PAGE " + target + "...");
-                renderPdfPageToCanvas();
-            }
-        };
-
-        function renderPdfPageToCanvas() {
-            if(!pdfDoc) return;
-            pdfDoc.getPage(pdfCurrentPage).then(function(page) {
-                var viewport = page.getViewport({ scale: 2.0 });
-                var canvas = document.getElementById('ocrCanvas'); var ctx = canvas.getContext('2d');
-                canvas.width = viewport.width; canvas.height = viewport.height; canvas.style.display = "block";
-                document.getElementById('pdfPageInfo').innerText = "Page: " + pdfCurrentPage + " / " + pdfTotalPages;
-                
-                var renderContext = { canvasContext: ctx, viewport: viewport };
-                page.render(renderContext).promise.then(function() { executeOcrRecognition(canvas); });
-            });
-        }
-
-        function executeOcrRecognition(canvas) {
-            updateStatusText("BOOTING CORE NEURAL TEXT EXTRACTION ARCHITECTURE...");
-            Tesseract.recognize(canvas, 'eng', { logger: m => {
-                if(m.status === 'recognizing') {
-                    updateStatusText("CONVERTING BITMAP DATA STREAMS: " + Math.round(m.progress * 100) + "%");
-                }
-            }}).then(({ data: { text } }) => {
-                document.getElementById('loadingScreen').style.display = 'none';
-                parseAndApplyOcrResults(text);
-            }).catch(err => {
-                document.getElementById('loadingScreen').style.display = 'none';
-                alert("CRITICAL CORE DECRYPTION ERROR DETECTED ON OCR EXTRACTION CHANNEL: " + err);
-            });
-        }
-
-        function parseAndApplyOcrResults(rawText) {
-            var fmt = document.getElementById('codeFormatSelector').value;
-            var lines = rawText.split('\n'); var validCodes = [];
-
-            lines.forEach(line => {
-                var txt = line.replace(/\s+/g, '').trim();
-                if(fmt === 'numeric16') {
-                    var matches = txt.match(/\d{16}/g);
-                    if(matches) matches.forEach(m => validCodes.push(m));
-                } else if(fmt === 'mixed9') {
-                    var matches = txt.match(/[A-Za-z0-9]{9}/g);
-                    if(matches) matches.forEach(m => validCodes.push(m));
-                } else {
-                    var rawCleaned = line.trim(); if(rawCleaned.length > 2) validCodes.push(rawCleaned);
-                }
-            });
-
-            if(validCodes.length > 0) {
-                document.getElementById('manualCodes').value = validCodes.join('\n');
-                alert("CYBER CORE ALERT: LOGGED FILTRATION EXTRACTED " + validCodes.length + " SEPARATED TARGET CODES EXTRACTIONS CONVERTED!");
-            } else {
-                alert("CYBER EXTRACTION LOG: STRUCTURAL VALUE MATCH PATTERNS EXTRACTED ZERO MATCHING SUB-STRING CODES!");
-                document.getElementById('manualCodes').value = rawText;
-            }
-        }
-
-        window.processAndUpload = function() {
-            var text = document.getElementById('manualCodes').value.trim();
-            var price = parseInt(document.getElementById('codePrice').value);
-
-            if(!text || isNaN(price)) return alert("CRITICAL ARGS: COMPILER PARAMETER ASSIGNMENT INCOMPLETE OR FAULTY DATA SELECTIONS!");
-
-            var lines = text.split('\n'); var counter = 0;
-            lines.forEach(function(lineStr) {
-                var cleaned = lineStr.trim();
-                if(cleaned) {
-                    db.ref("wifi_system/master_inventory").push({ code: cleaned, price: price }); counter++;
-                }
-            });
-
-            alert("COMMIT REPORT: TRANSACTION DISPATCH INTEGRATED " + counter + " NODES CODES INTO CYBER MAIN INVENTORY VAULT!");
-            document.getElementById('manualCodes').value = "";
-        };
-
-        function switchAdminSubPage(subId, btnEl) {
-            document.getElementById('adminSubDashboard').style.display = 'none';
-            document.getElementById('adminSubUpload').style.display = 'none';
-            document.getElementById('adminSubAgents').style.display = 'none';
-            document.getElementById('adminSubSettings').style.display = 'none';
-            
-            document.getElementById('adminSub' + subId.charAt(0).toUpperCase() + subId.slice(1)).style.display = 'block';
-            var navs = btnEl.parentElement.querySelectorAll('.nav-item');
-            navs.forEach(function(n) { n.classList.remove('active'); }); btnEl.classList.add('active');
-        }
-
-
-        // ================= AGENT TERMINAL DATA EXTRACTION SUB-SYSTEMS =================
-        function renderAgentSection() {
-            if(!currentLoggedInAgent || !systemData.agents || !systemData.agents[currentLoggedInAgent]) return;
-
-            var curAgent = systemData.agents[currentLoggedInAgent];
-            document.getElementById('agentGreeting').innerText = "DOWNLINK NODE LINKAGE ID: " + curAgent.name.toUpperCase();
-            document.getElementById('agentBalance').innerText = (curAgent.balance || 0).toLocaleString() + " MMK";
-
-            // ဝယ်ယူထားပြီး မရောင်းရသေးသောကုတ်များ စာရင်းတည်ဆောက်မှုဇုန်
-            var invHtml = "";
-            if(curAgent.my_inventory) {
-                for(var ik in curAgent.my_inventory) {
-                    var item = curAgent.my_inventory[ik];
-                    invHtml += `<div class="code-item">
-                        <div>
-                            <span style="font-size:18px; color:#fff; font-family:monospace; letter-spacing:1px; text-shadow:var(--text-glow);">${item.code}</span><br>
-                            <small style="color:var(--neon-blue)">MATRIX VALUE: ${item.price} MMK</small>
-                        </div>
-                        <button class="holo-btn" style="padding: 6px 15px; font-size:13px;" onclick="window.sellCodeAction('${ik}', '${item.code}', ${item.price})">ရောင်းမည် (SELL PACKET)</button>
-                    </div>`;
-                }
-            }
-            document.getElementById('agentInventoryContainer').innerHTML = invHtml || "<p style='color:var(--gray); text-align:center;'>Your local data storage nodes block possesses no active stock arrays.</p>";
-        }
-
-        window.buyCodesFromAdmin = function() {
-            var qty = parseInt(document.getElementById('buyQty').value);
-            if(isNaN(qty) || qty <= 0) return alert("LOAD REQ ERROR: INVALID COMPONENT REQUEST GENERATION VALUE SIZE!");
-
-            if(!systemData.master_inventory) return alert("DOWNLINK FAULT: ROOT MASTER MATRIX STORAGE POSSESSES VACANT CODES HOARD!");
-
-            var masterKeys = Object.keys(systemData.master_inventory);
-            if(masterKeys.length < qty) return alert("DOWNLINK RESTRICTION: DEMAND COUNTER SIZE EXCEEDS ROOT STORAGE PACKETS!");
-
-            for(var i=0; i<qty; i++) {
-                var targetKey = masterKeys[i]; var codeData = systemData.master_inventory[targetKey];
-                db.ref("wifi_system/agents/" + currentLoggedInAgent + "/my_inventory").push(codeData);
-                db.ref("wifi_system/master_inventory/" + targetKey).remove();
-            }
-
-            alert("DATA SYNC SUCCESS: ACQUIRED AND ENCRYPTED " + qty + " DATA CODES INTO SUB-STORAGE CACHE NODES!");
-            document.getElementById('buyQty').value = "";
-        };
-
-        // ရောင်းပြီး ခလုပ်နှိပ်လျှင် ငွေရင်းထဲပေါင်း၊ ရောင်းပြီးသား စာရင်းထဲသိမ်း
-        window.sellCodeAction = function(invKey, codeVal, priceVal) {
             var updates = {};
-            var currentAgentObj = systemData.agents[currentLoggedInAgent];
-            var updatedBalance = (currentAgentObj.balance || 0) + parseInt(priceVal);
-            var overallRevenue = (systemData.total_revenue || 0) + parseInt(priceVal);
-
-            updates["wifi_system/agents/" + currentLoggedInAgent + "/balance"] = updatedBalance;
+            updates["wifi_system/totalProfit"] = targetProfitNode;
+            updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = 0;
+            updates["wifi_system/agents/" + agentIndex + "/settlementStatus"] = "normal";
             
-            var soldRefKey = db.ref("wifi_system/agents/" + currentLoggedInAgent + "/sold_codes").push().key;
-            updates["wifi_system/agents/" + currentLoggedInAgent + "/sold_codes/" + soldRefKey] = {
-                code: codeVal, price: priceVal, sold_at: new Date().toLocaleString()
-            };
-            updates["wifi_system/agents/" + currentLoggedInAgent + "/my_inventory/" + invKey] = null;
-            updates["wifi_system/total_revenue"] = overallRevenue;
-
-            db.ref().update(updates).then(() => {
-                alert("TRANSACTION COMPLETED RECORD: +" + priceVal + " INTEGRATED TO ACCOUNT MATRIX CREDITS!\nCODE DEPLOYED: " + codeVal);
+            db.ref().update(updates).then(function() {
+                alert(`🎉 Agent: ${agentId.toUpperCase()} ၏ Ngwe စာရင်း ရှင်းလင်းပြီးပါပြီဗျာ။`); 
             });
-        };
+        }
+    }
 
-        // WINDOW POPUPS MANAGERS FOR AGENT VIEW SOLD HISTORY
-        window.openSoldCodesWindow = function() {
-            document.getElementById('windowOverlay').style.display = 'block';
-            var win = document.getElementById('soldCodesWindow'); win.style.display = 'flex';
-            setTimeout(() => { win.style.transform = 'translate(-50%, -50%) scale(1)'; }, 50);
+    window.processRefundAndClose = function(index) {
+        var report = window.systemDB.errorReports[index];
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toUpperCase() === report.agentId.toUpperCase(); });
+        
+        var updates = {};
+        if (agentIndex !== -1) {
+            var targetAgent = window.systemDB.agents[agentIndex];
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === report.package; });
+            var cardPrice = targetPkg ? targetPkg.price : 0;
+            var agentRefundComm = cardPrice * (targetAgent.comm / 100); 
+            var ownerRefundNet = cardPrice - agentRefundComm;          
+            
+            var nextEarned = (targetAgent.earned || 0) - agentRefundComm;
+            var nextToPay = (targetAgent.toPayAdmin || 0) - ownerRefundNet;
+            if(nextToPay < 0) nextToPay = 0;
+            
+            updates["wifi_system/agents/" + agentIndex + "/earned"] = nextEarned;
+            updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = nextToPay;
+        }
+        
+        window.systemDB.errorReports.splice(index, 1);
+        updates["wifi_system/errorReports"] = window.systemDB.errorReports;
+        
+        db.ref().update(updates).then(function() {
+            alert(`🎉 Ngwe ပြန်အမ်းမှု ပြီးမြောက်ပါပြီ။`);
+        });
+    }
 
-            var curAgent = systemData.agents[currentLoggedInAgent];
-            var container = document.getElementById('soldCodesListContainer'); var html = "";
+    window.deleteReport = function(index) { 
+        window.systemDB.errorReports.splice(index, 1); 
+        db.ref("wifi_system/errorReports").set(window.systemDB.errorReports); 
+    }
 
-            if(curAgent && curAgent.sold_codes) {
-                for(var sk in curAgent.sold_codes) {
-                    var sc = curAgent.sold_codes[sk];
-                    html += `<div class="code-item">
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <input type="checkbox" class="sold-select-checkbox" value="${sk}">
-                            <div>
-                                <span style="font-family:monospace; font-size:16px; color:#fff;">${sc.code}</span><br>
-                                <small style="color:var(--gray)">Timestamp: ${sc.sold_at} | Account Yield: +${sc.price} MMK</small>
-                            </div>
-                        </div>
-                        <span class="badge badge-success">DISPATCHED</span>
-                    </div>`;
-                }
+    // ====== SCAN PROCESS LOGICS ======
+    window.showOptionsModal = function() {
+        var fileInput = document.getElementById('imageInput');
+        if(fileInput.files.length === 0) return;
+        selectedFile = fileInput.files[0];
+        document.getElementById('optionsModal').style.display = "block";
+    }
+    window.closeModal = function() { document.getElementById('optionsModal').style.display = "none"; }
+    
+    window.startScanningWithSensor = function(type) {
+        closeModal();
+        var statusText = document.getElementById('status');
+        statusText.innerText = "🔄 ပုံဖိုင်ထဲမှ ကုဒ်များကို ဖတ်နေပါသည်... စောင့်ပါ။";
+        document.getElementById('editArea').style.display = "none";
+        var ocrOptions = {}; var filterRegex;
+        if (type === 'text_only') {
+            ocrOptions = { tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' };
+            filterRegex = /\b[A-Za-z]{4,8}\b/g;
+        } else if (type === 'num_only') {
+            ocrOptions = { tessedit_char_whitelist: '0123456789' };
+            filterRegex = /\b\d{4,8}\b/g;
+        } else if (type === 'mixed') {
+            ocrOptions = { tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' };
+            filterRegex = /\b[A-Za-0-9]{4,8}\b/g;
+        }
+        Tesseract.recognize(selectedFile, 'eng', { options: ocrOptions }).then(function(result) {
+            statusText.innerText = "✅ ဖတ်လို့ပြီးပါပြီ။";
+            var foundCodes = result.data.text.match(filterRegex) || [];
+            displayScannedCodes(foundCodes);
+        }).catch(function(err) {
+            statusText.innerText = "❌ ပုံဖိုင်ဖတ်၍ မရပါ။ ကျေးဇူးပြု၍ တခြားပုံဖြင့် ပြန်တင်ကြည့်ပါ။";
+        });
+    }
+
+    function displayScannedCodes(codes) {
+        var listDiv = document.getElementById('scannedCodesList');
+        if (!listDiv) return;
+        listDiv.innerHTML = "";
+        if(codes.length === 0) {
+            listDiv.innerHTML = "<p style='color:red; font-size:12px; padding:10px;'>ကုဒ်များ ရှာမတွေ့ပါ။ စာသားကြည်လင်ပြတ်သားသော ဖိုင်ဖြစ်ရပါမည်။</p>";
+            document.getElementById('editArea').style.display = "block"; return;
+        }
+        codes.forEach(function(code, index) {
+            listDiv.innerHTML += `
+                <div class="code-row">
+                    <span style="font-size:12px; font-weight:bold;">${index + 1}:</span>
+                    <input type="text" class="code-edit-input" value="${code}" style="margin:0; padding:8px;">
+                </div>
+            `;
+        });
+        document.getElementById('editArea').style.display = "block";
+    }
+
+    window.confirmAndSaveScanned = function() {
+        var pkg = document.getElementById('uploadPackageSelect').value;
+        var inputs = document.querySelectorAll('.code-edit-input');
+        var addedCount = 0; var duplicateCount = 0;
+        
+        if (!window.systemDB.wifiCodes[pkg]) window.systemDB.wifiCodes[pkg] = [];
+        inputs.forEach(function(input) {
+            var val = input.value.trim();
+            if(val !== "") {
+                if (!window.systemDB.wifiCodes[pkg].includes(val)) {
+                    window.systemDB.wifiCodes[pkg].push(val); addedCount++;
+                } else { duplicateCount++; }
             }
-            container.innerHTML = html || "<p style='color:var(--gray); text-align:center; padding:20px;'>Your history archive registers empty logging data frames.</p>";
-            document.getElementById('selectAllSold').checked = false;
-        };
+        });
+        
+        db.ref("wifi_system/wifiCodes/" + pkg).set(window.systemDB.wifiCodes[pkg]).then(function() {
+            alert(`သိမ်းဆည်းပြီး။`);
+            document.getElementById('editArea').style.display = "none";
+            document.getElementById('imageInput').value = "";
+            document.getElementById('pdfFileInput').value = "";
+            document.getElementById('status').innerText = "";
+            document.getElementById('pdfStatus').innerText = "";
+        });
+    }
 
-        window.closeSoldCodesWindow = function() {
-            document.getElementById('windowOverlay').style.display = 'none';
-            var win = document.getElementById('soldCodesWindow'); win.style.transform = 'translate(-50%, -50%) scale(0.9)';
-            setTimeout(() => { win.style.display = 'none'; }, 200);
-        };
+    window.createAgentAccount = function() {
+        var id = document.getElementById('newAgentId').value.trim().toLowerCase();
+        var name = document.getElementById('newAgentName').value.trim();
+        var pass = document.getElementById('newAgentPass').value.trim();
+        var comm = parseInt(document.getElementById('newAgentComm').value);
+        if(!id || !name || !pass || isNaN(comm)) return alert("အချက်အလက် ဖြည့်စွက်ပါဦး။");
+        if(id === "admin" || (window.systemDB.agents && window.systemDB.agents.some(function(a) { return a.id.toLowerCase() === id; }))) return alert("⚠️ ဤ Agent ID ရှိပြီးသားဖြစ်သည်!");
+        
+        if(!window.systemDB.agents) window.systemDB.agents = [];
+        window.systemDB.agents.push({ id: id, name: name, pass: pass, comm: comm, earned: 0, toPayAdmin: 0, settlementStatus: "normal", myInventory: [] });
+        
+        db.ref("wifi_system/agents").set(window.systemDB.agents).then(function() {
+            document.getElementById('newAgentId').value = ""; 
+            document.getElementById('newAgentName').value = ""; 
+            document.getElementById('newAgentPass').value = ""; 
+            document.getElementById('newAgentComm').value = "";
+            alert(`✅ အေးဂျင့်အကောင့် ဆောက်ပြီးပါပြီ။`);
+        });
+    }
 
-        // One Select All Function
-        window.toggleSelectAllSold = function(masterBox) {
-            var checkboxes = document.querySelectorAll('.sold-select-checkbox');
-            checkboxes.forEach(cb => { cb.checked = masterBox.checked; });
-        };
+    window.deleteAgentAccount = function(index) {
+        if(confirm("ဤအကောင့်ကို ဖျက်ရန် သေချာပါသလား?")) {
+            var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
+            if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
+            
+            var agentId = window.systemDB.agents[index].id.toLowerCase();
+            window.systemDB.agents.splice(index, 1);
+            
+            db.ref("wifi_system/agents").set(window.systemDB.agents);
+            db.ref("wifi_system/currentDevices/" + agentId).remove().then(function() {
+                if(editingAgentIndex === index) cancelEditAgentMode();
+            });
+        }
+    }
 
-        // Multi Select Matrix Deletion Function
-        window.deleteSelectedSoldCodes = function() {
-            var checkboxes = document.querySelectorAll('.sold-select-checkbox:checked');
-            if(checkboxes.length === 0) return alert("SELECTION ERROR: VACANT TARGET CELLS GIVEN FOR REMOVAL!");
+    window.unlockAgentDevice = function(agentId) {
+        if(!window.systemDB.currentDevices || !window.systemDB.currentDevices[agentId.toLowerCase()]) return alert("Lock ကျမနေပါဗျာ။");
+        var adminPwd = prompt("🔑 အတည်ပြုရန် Admin Password ရိုက်ထည့်ပါ -");
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
+        
+        db.ref("wifi_system/currentDevices/" + agentId.toLowerCase()).remove().then(function() {
+            alert(`🎉 Device Lock ဖြုတ်ပေးလိုက်ပါပြီဗျာ။ ဖုန်းအသစ်ဖြင့် အေးဂျင့် ဝင်နိုင်ပါပြီ။`);
+        });
+    }
 
-            if(confirm("CONFIRM COMPLETE DELETION OF SELECTED " + checkboxes.length + " DATA PACKETS FROM CORE TERMINAL STORAGE?")) {
-                var updates = {};
-                checkboxes.forEach(cb => {
-                    var soldKey = cb.value;
-                    updates["wifi_system/agents/" + currentLoggedInAgent + "/sold_codes/" + soldKey] = null;
-                });
+    window.saveAdminSettings = function() {
+        var adminPwd = prompt("🔑 ဆက်တင်သိမ်းရန် Admin Password ရိုက်ထည့်ပါ -");
+        if (adminPwd !== window.systemDB.adminPassword) return alert("❌ Password မှားယွင်းနေပါသည်!");
+        
+        var nextPass = document.getElementById('txtAdminPass').value.trim();
+        var nextRefund = document.getElementById('chkEnableRefund').checked;
+        
+        db.ref("wifi_system").update({
+            adminPassword: nextPass,
+            enableRefund: nextRefund
+        }).then(function() {
+            alert("💾 ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။");
+        });
+    }
 
-                db.ref().update(updates).then(() => {
-                    alert("SELECTED TARGET MEMORY LOGS PURGED FROM THE SYSTEM DATABASES!");
-                    window.openSoldCodesWindow(); // Reload view
-                });
+    // ==================== 👥 AGENT METHODS ====================
+    window.setupAgentDashboard = function() {
+        if(!currentLoggedInAgent) return;
+        document.getElementById('currentAgentLabel').innerText = `${currentLoggedInAgent.name} (${currentLoggedInAgent.id.toUpperCase()})`;
+        document.getElementById('lblAgentProfit').innerText = (currentLoggedInAgent.earned || 0) + " Ks";
+        document.getElementById('lblAgentToPay').innerText = (currentLoggedInAgent.toPayAdmin || 0) + " Ks";
+        
+        var statusLbl = document.getElementById('lblSettlementStatus');
+        var submitBtn = document.getElementById('btnSubmitSettlement');
+        if(currentLoggedInAgent.settlementStatus === "pending") {
+            statusLbl.innerText = "⏳ စောင့်ဆိုင်းဆဲ"; statusLbl.style.color = "var(--orange)"; submitBtn.disabled = true; submitBtn.style.opacity = "0.5";
+        } else {
+            statusLbl.innerText = "ပုံမှန်"; statusLbl.style.color = "var(--gray)"; submitBtn.disabled = false; submitBtn.style.opacity = "1";
+        }
+        renderAgentInventoryHTML(); updateBuyPriceLabel();
+    }
+
+    window.updateBuyPriceLabel = function() {
+        var pkgId = document.getElementById('buyPackageSelect').value;
+        var targetPkg = window.systemDB.packages.find(function(p) { return p.id === pkgId; });
+        if(targetPkg) document.getElementById('lblSellPrice').innerText = targetPkg.price;
+    }
+
+    window.askPasswordConfirm = function() {
+        var count = parseInt(document.getElementById('buyCountSelect').value);
+        if (isNaN(count) || count <= 0) return alert("⚠️ ကျေးပြု၍ ဝယ်ယူမည့် အရေအတွက်ကို ထည့်ပါ။");
+        document.getElementById('txtAgentActionPwd').value = ""; document.getElementById('pwdConfirmBox').style.display = "block"; 
+    }
+    window.closePwdBox = function() { document.getElementById('pwdConfirmBox').style.display = "none"; }
+
+    window.executeBuyCodesConfirmed = function() {
+        if(document.getElementById('txtAgentActionPwd').value.trim() !== currentLoggedInAgent.pass) return alert("❌ Password မှားယွင်းနေပါသည်။");
+        closePwdBox(); 
+        
+        var pkg = document.getElementById('buyPackageSelect').value;
+        var count = parseInt(document.getElementById('buyCountSelect').value);
+        
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+        if (agentIndex === -1) return alert("စနစ်အမှားအယွင်း ဖြစ်သွားပါသည်!");
+
+        db.ref("wifi_system/wifiCodes/" + pkg).get().then(function(snapshot) {
+            var freshCodesList = snapshot.val() || [];
+            if(freshCodesList.length < count) {
+                return alert(`❌ ကုဒ်မလုံလောက်တော့ပါ။ လက်ကျန်: ${freshCodesList.length} ခုပဲ ရှိပါသည်။`);
             }
-        };
-    </script>
+            
+            var codesExtracted = [];
+            for (var i = 0; i < count; i++) {
+                codesExtracted.push(freshCodesList.shift());
+            }
+            
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === pkg; });
+            var currentPrice = targetPkg ? targetPkg.price : 0;
+            
+            if(!currentLoggedInAgent.myInventory) currentLoggedInAgent.myInventory = [];
+            codesExtracted.forEach(function(codeStr) {
+                currentLoggedInAgent.myInventory.push({ code: codeStr, package: pkg, price: currentPrice, status: 'bought' });
+            });
+            
+            window.systemDB.agents[agentIndex].myInventory = currentLoggedInAgent.myInventory;
+
+            if(!window.systemDB.purchaseLogs) window.systemDB.purchaseLogs = [];
+            window.systemDB.purchaseLogs.push({ 
+                time: new Date().toLocaleTimeString(), 
+                agentId: currentLoggedInAgent.id.toUpperCase(), 
+                package: pkg, 
+                count: count, 
+                totalPrice: (currentPrice * count) 
+            });
+
+            var updates = {};
+            updates["wifi_system/wifiCodes/" + pkg] = freshCodesList;
+            updates["wifi_system/purchaseLogs"] = window.systemDB.purchaseLogs;
+            updates["wifi_system/agents/" + agentIndex + "/myInventory"] = currentLoggedInAgent.myInventory;
+            
+            db.ref().update(updates).then(function() {
+                alert("🎉 ကုဒ်များ ထုတ်ယူမှု အောင်မြင်ပါသည်။");
+                setupAgentDashboard();
+            });
+        });
+    }
+
+    function renderAgentInventoryHTML() {
+        var container = document.getElementById('boughtCodesList');
+        var areaDiv = document.getElementById('boughtCodesArea');
+        if(!temporaryAgentInventory || temporaryAgentInventory.length === 0) { areaDiv.style.display = "none"; return; }
+        areaDiv.style.display = "block"; container.innerHTML = "";
+        
+        temporaryAgentInventory.forEach(function(item, index) {
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === item.package; });
+            var badgeType = targetPkg ? targetPkg.name.split(" ")[0] : item.package.toUpperCase();
+            if(item.status === 'sold') {
+                container.innerHTML += `
+                    <div class="agent-code-item" style="opacity:0.4;">
+                        <span style="text-decoration: line-through;">🔑 [${badgeType}] <b>${item.code}</b></span>
+                        <span style="color:var(--success); font-weight:bold;">ရောင်းပြီး</span>
+                    </div>
+                `;
+            } else {
+                container.innerHTML += `
+                    <div class="agent-code-item">
+                        <span style="font-size:14px;">🔑 [${badgeType}] <b style="color:#818cf8; font-size:16px;">${item.code}</b></span>
+                        <button class="btn-success btn-sm" onclick="markAsIndividualSold(${index})">💰 ရောင်းပြီး</button>
+                    </div>
+                `;
+            }
+        });
+        
+        var printText = `<h3>ရွှေမဲဇာ ဝိုင်ဖိုင် ကတ်များစာရင်း</h3><hr>`;
+        temporaryAgentInventory.forEach(function(item, index) {
+            if(item.status !== 'sold') {
+                var targetPkg = window.systemDB.packages.find(function(p) { return p.id === item.package; });
+                printText += `<p>${index+1}) ${targetPkg ? targetPkg.name : item.package} : <b>${item.code}</b></p>`;
+            }
+        });
+        document.getElementById('printArea').innerHTML = printText;
+    }
+
+    window.markAsIndividualSold = function(index) {
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+        if(agentIndex === -1) return;
+
+        var item = temporaryAgentInventory[index]; 
+        item.status = 'sold';
+        
+        var profitEarned = item.price * (currentLoggedInAgent.comm / 100); 
+        var nextEarned = (currentLoggedInAgent.earned || 0) + profitEarned; 
+        var nextToPayAdmin = (currentLoggedInAgent.toPayAdmin || 0) + (item.price - profitEarned);
+
+        var updates = {};
+        updates["wifi_system/agents/" + agentIndex + "/earned"] = nextEarned;
+        updates["wifi_system/agents/" + agentIndex + "/toPayAdmin"] = nextToPayAdmin;
+        updates["wifi_system/agents/" + agentIndex + "/myInventory"] = temporaryAgentInventory;
+        
+        db.ref().update(updates).then(function() {
+            setupAgentDashboard();
+        });
+    }
+
+    window.copyAllCodesToClipboard = function() {
+        var rawText = ""; var activeItems = temporaryAgentInventory.filter(function(i) { return i.status !== 'sold'; });
+        if(activeItems.length === 0) return alert("မရောင်းရသေးသော ကုဒ်စာရင်းမရှိပါ။");
+        activeItems.forEach(function(item, idx) {
+            var targetPkg = window.systemDB.packages.find(function(p) { return p.id === item.package; });
+            rawText += `${idx+1}) ${targetPkg ? targetPkg.name : item.package}: ${item.code}\n`;
+        });
+        navigator.clipboard.writeText(rawText); alert("📋 Copy ကူးယူပြီးပါပြီဗျာ။");
+    }
+    
+    window.printCodesSection = function() {
+        if(temporaryAgentInventory.filter(function(i) { return i.status !== 'sold'; }).length === 0) return alert("ပရင့်ထုတ်ရန် ကုဒ်မရှိပါ။");
+        window.print();
+    }
+
+    window.submitSettlementRequest = function() {
+        if(currentLoggedInAgent.toPayAdmin <= 0) return alert("ရှင်းလင်းရန် ပေးရန်ငွေ မရှိသေးပါဗျာ။");
+        var agentPwd = prompt(`🔑 ကျသင့်ငွေ ${currentLoggedInAgent.toPayAdmin} Ks ရှင်းရန် သင့်အကောင့် Password ကို ရိုက်ထည့်ပါ -`);
+        if (agentPwd !== currentLoggedInAgent.pass) return alert("❌ Password မှားယွင်းနေပါသည်!");
+        
+        var agentIndex = window.systemDB.agents.findIndex(function(a) { return a.id.toLowerCase() === currentLoggedInAgent.id.toLowerCase(); });
+        if(agentIndex !== -1) {
+            db.ref("wifi_system/agents/" + agentIndex + "/settlementStatus").set("pending").then(function() {
+                alert("✅ Ngwe ရှင်းရန် တောင်းဆိုမှု တင်ပြပြီးပါပြီ။");
+            });
+        }
+    }
+
+    window.submitErrorReport = function() {
+        var pkgIn = document.getElementById('reportErrorTypeSelect').value;
+        var codeIn = document.getElementById('reportErrorCodeInput').value.trim();
+        var reasonIn = document.getElementById('reportErrorReasonInput').value.trim();
+        if(!codeIn || !reasonIn) return alert("⚠️ အချက်အလက်များကို ဖြည့်စွက်ပေးပါ။");
+        
+        if(!window.systemDB.errorReports) window.systemDB.errorReports = [];
+        window.systemDB.errorReports.push({ agentId: currentLoggedInAgent.id.toUpperCase(), package: pkgIn, errorCode: codeIn, reason: reasonIn });
+        
+        db.ref("wifi_system/errorReports").set(window.systemDB.errorReports).then(function() {
+            alert("⚠️ ပိုင်ရှင်ထံသို့ Error တင်ပြပေးလိုက်ပါပြီ။");
+            document.getElementById('reportErrorCodeInput').value = ""; 
+            document.getElementById('reportErrorReasonInput').value = "";
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        setTimeout(function() {
+            var overlay = document.getElementById('dbLoadingOverlay');
+            if (overlay && overlay.style.display !== 'none') {
+                overlay.style.display = 'none'; 
+                showPage('loginPage'); 
+            }
+        }, 3000); 
+    });
+</script>
+
+<script>
+    // Modern Sliding Transitions for Sub Pages (Star Wars Screen Slidings)
+    function switchAdminSubPage(subId, btnEl) {
+        var subPages = ['adminSubDashboard', 'adminSubUpload', 'adminSubAgents', 'adminSubSettings'];
+        subPages.forEach(function(id) {
+            var el = document.getElementById(id);
+            if(el) {
+                el.style.display = 'none';
+                el.classList.remove('starwars-slide-in');
+            }
+        });
+        
+        var activeTargetId = 'adminSub' + subId.charAt(0).toUpperCase() + subId.slice(1);
+        var targetEl = document.getElementById(activeTargetId);
+        if(targetEl) {
+            targetEl.style.display = 'block';
+            targetEl.classList.add('starwars-slide-in'); // Trigger slide transition
+        }
+        
+        var navs = btnEl.parentElement.querySelectorAll('.nav-item');
+        navs.forEach(function(n) { n.classList.remove('active'); }); btnEl.classList.add('active');
+    }
+
+    function switchAgentSubPage(subId, btnEl) {
+        var agentPages = ['agentSubMain', 'agentSubReport'];
+        agentPages.forEach(function(id) {
+            var el = document.getElementById(id);
+            if(el) {
+                el.style.display = 'none';
+                el.classList.remove('starwars-slide-in');
+            }
+        });
+        
+        var activeTargetId = 'agentSub' + subId.charAt(0).toUpperCase() + subId.slice(1);
+        var targetEl = document.getElementById(activeTargetId);
+        if(targetEl) {
+            targetEl.style.display = 'block';
+            targetEl.classList.add('starwars-slide-in'); // Trigger slide transition
+        }
+        
+        var navs = btnEl.parentElement.querySelectorAll('.nav-item');
+        navs.forEach(function(n) { n.classList.remove('active'); }); btnEl.classList.add('active');
+    }
+</script>
+
 </body>
 </html>
