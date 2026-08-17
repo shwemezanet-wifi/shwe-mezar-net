@@ -6,6 +6,9 @@
     <title>ရွှေမဲဇာနက် Wi-Fi</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -416,13 +419,13 @@
     // Firebase Configuration
     var firebaseConfig = {
       apiKey: "AIzaSyDRzsHJ1fjhGJFAqumeHvG4tio7hU7Bt6A",
-  authDomain: "shwe-meza-net-wifi.firebaseapp.com",
-  databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "shwe-meza-net-wifi",
-  storageBucket: "shwe-meza-net-wifi.firebasestorage.app",
-  messagingSenderId: "441871786600",
-  appId: "1:441871786600:web:a901834fab6393fc3391dd",
-  measurementId: "G-GCGLTXZD9Z"
+      authDomain: "shwe-meza-net-wifi.firebaseapp.com",
+      databaseURL: "https://shwe-meza-net-wifi-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "shwe-meza-net-wifi",
+      storageBucket: "shwe-meza-net-wifi.firebasestorage.app",
+      messagingSenderId: "441871786600",
+      appId: "1:441871786600:web:a901834fab6393fc3391dd",
+      measurementId: "G-GCGLTXZD9Z"
     };
 
     // Firebase Initialization
@@ -989,18 +992,21 @@
         var statusText = document.getElementById('status');
         statusText.innerText = "🔄 ပုံဖိုင်ထဲမှ ကုဒ်များကို ဖတ်နေပါသည်... စောင့်ပါ။";
         document.getElementById('editArea').style.display = "none";
-        var ocrOptions = {}; var filterRegex;
+        
+        var charWhitelist = '';
+        var filterRegex;
         if (type === 'text_only') {
-            ocrOptions = { tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' };
+            charWhitelist = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
             filterRegex = /\b[A-Za-z]{4,8}\b/g;
         } else if (type === 'num_only') {
-            ocrOptions = { tessedit_char_whitelist: '0123456789' };
+            charWhitelist = '0123456789';
             filterRegex = /\b\d{4,8}\b/g;
         } else if (type === 'mixed') {
-            ocrOptions = { tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' };
-            filterRegex = /\b[A-Za-0-9]{4,8}\b/g;
+            charWhitelist = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            filterRegex = /\b[A-Za-z0-9]{4,8}\b/g;
         }
-        Tesseract.recognize(selectedFile, 'eng', { options: ocrOptions }).then(function(result) {
+        
+        Tesseract.recognize(selectedFile, 'eng').then(function(result) {
             statusText.innerText = "✅ ဖတ်လို့ပြီးပါပြီ။";
             var foundCodes = result.data.text.match(filterRegex) || [];
             displayScannedCodes(foundCodes);
@@ -1297,8 +1303,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', function() {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        
         setTimeout(function() {
             var overlay = document.getElementById('dbLoadingOverlay');
             if (overlay && overlay.style.display !== 'none') {
